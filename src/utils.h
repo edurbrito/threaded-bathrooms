@@ -29,18 +29,4 @@ void printArgs(args * a);
  */
 int checkArgs(int argc, char * argv[], args * a, caller C);
 
-/**
- * @brief Creates a Fifo with name passed in @p fifoName
- * @param fifoName the name of the named Fifo
- * @return OK if successful, ERROR otherwise
-*/
-int createFifo(char * fifoName);
-
-/**
- * @brief Destroy a Fifo with name passed in @p fifoName
- * @param fifoName the name of the named Fifo
- * @return OK if successful, ERROR otherwise
-*/
-int killFifo(char * fifoName);
-
 #endif

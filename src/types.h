@@ -6,6 +6,7 @@
 #define OK 0
 #define ERROR 1
 #define FIFONAME_SIZE 200
+#define MAX_THREADS 20
 
 typedef enum{ U, Q } caller;
 

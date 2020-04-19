@@ -2,11 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include "utils.h"
 #include "types.h" 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 void printArgs(args * a){
@@ -108,26 +105,4 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
     strcpy(a->fifoname, tempargs.fifoname);
    
     return OK;
-}
-
-int createFifo(char * fifoName){
-    if(mkfifo(fifoName,0660) < 0){
-        if (errno == EEXIST)
-            printf("FIFO '%s' already exists.\n",fifoName);
-        else {
-            printf("Can't create FIFO %s.\n",fifoName); 
-            exit(ERROR);
-        }
-    }
-   exit(OK);
-}
-
-int killFifo(char * fifoName){
-    if(unlink(fifoName) < 0){
-        printf("Error when destroying %s.'\n",fifoName);
-        exit(ERROR);
-    }
-    
-    printf("Fifo %s destroyed.\n",fifoName);
-    exit(ERROR);
 }
