@@ -25,4 +25,10 @@ typedef struct message {
     char fifoname[FIFONAME_SIZE];
 } message;
 
+typedef struct clientparameters {
+    char fifoname[50];
+    int id;
+}clientparameters;
+
+
 #endif
