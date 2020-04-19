@@ -118,7 +118,7 @@ int createFifo(char * fifoName){
             printf("Can't create FIFO %s.\n",fifoName); 
             exit(ERROR);
         }
-   }
+    }
    exit(OK);
 }
 
