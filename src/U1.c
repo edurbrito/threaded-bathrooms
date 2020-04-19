@@ -13,62 +13,50 @@
 
 void * clients_request(void * arg) { 
 
-    struct clientparameters *parameters = (struct clientparameters *)arg;
-    struct message msg;
-    char fifoclient[FIFONAME_SIZE];
+    clientParams *params = (struct clientParams *)arg;
+    message msg;
+    char fifoClient[FIFONAME_SIZE];
     int fdwrite, fdread;
 
-    sprintf(fifoclient, "/tmp/%d.%lu", getpid(), pthread_self());
+    sprintf(fifoClient, "/tmp/%d.%lu", getpid(), pthread_self());
 
-    //Cria o fifo para o cliente ler a informacao do servidor
-    if(mkfifo(fifoclient,0660) < 0){
+    // Creats fifo for the client to read info from server
+    if(mkfifo(fifoClient,0660) < 0){
         if (errno == EEXIST)
-            printf("FIFO '%s' already exists.\n",parameters->fifoname);
+            printf("FIFO '%s' already exists.\n",params->fifoName);
         else {
-            printf("Can't create FIFO %s.\n",parameters->fifoname); 
+            printf("Can't create FIFO %s.\n",params->fifoName); 
             exit(ERROR);
         }
     }
 
-    //Abre o ficheiro para escrever ao servidor o pedido
-    if ((fdwrite = open(parameters->fifoname, O_WRONLY)) != -1)
-        printf("FIFO '%s' openned in WRITEONLY mode\n",parameters->fifoname);
+    fdwrite = open(params->fifoName, O_WRONLY);
+    if(fdwrite == -1){
+        fprintf(stderr,"Error opening %s in WRITEONLY mode.\n",params->fifoName);
+        exit(ERROR);
+    }
 
-    msg.dur = (rand() % 2) + 1;
-    msg.pid = getpid();
-    msg.tid = pthread_self();
-    msg.i = parameters->id;
-    strcpy(msg.fifoname, fifoclient);
+    buildMsg(&msg, params->id);
 
-    printf("Sending message\n");
-    write(fdwrite, &msg, sizeof(struct message));
+    strcpy(msg.fifoName, fifoClient);
+
+    // Send message to server
+    write(fdwrite, &msg, sizeof(message));
     close(fdwrite);
 
-    if ((fdread = open(fifoclient,O_RDONLY)) != -1)
-        printf("FIFO %s openned in READONLY mode\n", fifoclient);
+    fdread = open(fifoClient,O_RDONLY);
+    if(fdread == -1){
+        fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoClient);
+        exit(ERROR);
+    }
 
-    //Abre o ficheiro para ler do servidor a resposta
-    if (read(fdread, &msg, sizeof(struct message)) < 0) {
+    // Receive message from server
+    if (read(fdread, &msg, sizeof(message)) < 0) {
         fprintf(stderr, "Couldn't read from %d", fdread);
         exit(ERROR);
     }
 
-    if (msg.pl == -1) {
-        printf("Numero do pedido = %d\n", msg.i);
-        printf("Pid = %d\n", msg.pid);
-        printf("Tid = %ld\n", msg.tid);
-        printf("Duracao = %d\n", msg.dur);
-        printf("Lugar atribuido = %d\n", msg.pl);
-        printf("Bathroom closed\n");
-    }
-    else {
-        printf("Numero do pedido = %d\n", msg.i);
-        printf("Pid = %d\n", msg.pid);
-        printf("Tid = %ld\n", msg.tid);
-        printf("Duracao = %d\n", msg.dur);
-        printf("Lugar atribuido = %d\n", msg.pl);
-        printf("\n");
-    }
+    printMsg(&msg);
 
     return NULL;
 }
@@ -79,7 +67,7 @@ int main(int argc, char * argv[]){
 
     int client_thread_array_size = 0;
 
-    struct clientparameters * parameters = (struct clientparameters *)malloc(sizeof(struct clientparameters));
+    clientParams * params = (clientParams *)malloc(sizeof(clientParams));
 
     pthread_t * client_thread_array = (pthread_t *)malloc(0);
     if (client_thread_array == NULL) {
@@ -93,11 +81,11 @@ int main(int argc, char * argv[]){
         exit(ERROR);
     }
 
-    sprintf(parameters->fifoname,"/tmp/%s",a.fifoname);
+    sprintf(params->fifoName,"/tmp/%s",a.fifoName);
 
     for (int i = 0 ; i < 3; i++) {
 
-        parameters->id = i;
+        params->id = i;
 
         client_thread_array = (pthread_t *) realloc(client_thread_array, (i + 1)*sizeof(pthread_t));
         if (client_thread_array == NULL) {
@@ -105,7 +93,7 @@ int main(int argc, char * argv[]){
             exit(ERROR);
         }
 
-        pthread_create(&client_thread_array[i], NULL, clients_request, (void *)parameters);
+        pthread_create(&client_thread_array[i], NULL, clients_request, (void *)params);
 
         client_thread_array_size++;
         usleep(5000000);
@@ -114,7 +102,6 @@ int main(int argc, char * argv[]){
     for (int i = 0; i < client_thread_array_size; i++) {
         pthread_join(client_thread_array[i], NULL);
     }
-
 
     /*if ( logOP(CLOSD,2,24,4) != OK )
         return ERROR;*/

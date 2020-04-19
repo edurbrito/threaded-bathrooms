@@ -14,7 +14,7 @@ typedef struct args {
     int nsecs;
     /*int nplaces;
     int nthreads;*/
-    char fifoname[FIFONAME_SIZE];
+    char fifoName[FIFONAME_SIZE];
 } args;
 
 typedef struct message {
@@ -23,13 +23,13 @@ typedef struct message {
     pthread_t tid;
     int dur;
     int pl;
-    char fifoname[FIFONAME_SIZE];
+    char fifoName[FIFONAME_SIZE];
 } message;
 
-typedef struct clientparameters {
-    char fifoname[FIFONAME_SIZE+5];
+typedef struct clientParams {
+    char fifoName[FIFONAME_SIZE+5];
     int id;
-}clientparameters;
+}clientParams;
 
 
 #endif

@@ -29,4 +29,8 @@ void printArgs(args * a);
  */
 int checkArgs(int argc, char * argv[], args * a, caller C);
 
+void buildMsg(message * msg,int id);
+
+void printMsg(message * msg);
+
 #endif

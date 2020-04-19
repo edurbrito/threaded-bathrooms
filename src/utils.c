@@ -11,8 +11,8 @@ void printArgs(args * a){
     printf("nsecs = %d\n", a->nsecs);
     /*printf("nplaces = %d\n", a->nplaces);
     printf("nthreads = %d\n", a->nthreads);*/
-    printf("fifoname = %s\n", a->fifoname);
-    printf("###### ARGS ######\n");
+    printf("fifoName = %s\n", a->fifoName);
+    printf("###### ARGS ######\n\n");
 }
 
 int checkArgs(int argc, char * argv[], args * a, caller C){
@@ -78,15 +78,15 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
     }
 
     // This reveals non-option args, like loose strings
-    // In our case, it may represent the fifoname
+    // In our case, it may represent the fifoName
     if (optind < argc){
         // printf("non-option ARGV-elements: ");
         while (optind < argc){
-            sprintf(tempargs.fifoname, "%s", argv[optind++]);
+            sprintf(tempargs.fifoName, "%s", argv[optind++]);
         }
     }
 
-    if( strlen(tempargs.fifoname) == 0 ) 
+    if( strlen(tempargs.fifoName) == 0 ) 
         return ERROR;
 
     a->nsecs = tempargs.nsecs;
@@ -102,7 +102,27 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
         a->nplaces = -1;
         a->nthreads = -1;
     }*/
-    strcpy(a->fifoname, tempargs.fifoname);
+    strcpy(a->fifoName, tempargs.fifoName);
    
     return OK;
+}
+
+void buildMsg(message * msg,int id){
+    msg->dur = (rand() % 2) + 1;
+    msg->pid = getpid();
+    msg->tid = pthread_self();
+    msg->i = id;
+}
+
+void printMsg(message * msg){
+    printf("###### MESSAGE ######\n");
+    printf("Numero do pedido = %d\n", msg->i);
+    printf("Pid = %d\n", msg->pid);
+    printf("Tid = %ld\n", msg->tid);
+    printf("Duracao = %d\n", msg->dur);
+    printf("Lugar atribuido = %d\n", msg->pl);
+    if(msg->pl == -1)
+        printf("Bathroom closed\n");
+    printf("###### MESSAGE ######\n\n");
+
 }

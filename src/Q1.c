@@ -11,9 +11,9 @@
 #include "types.h"
 #include "logging.h"
 
-void *thr_func(void *arg)
-{
-    struct message msg = *(message *) arg;
+void *thr_func(void *arg){
+
+    message msg = *(message *) arg;
     char fifoName[FIFONAME_SIZE];
     sprintf(fifoName,"/tmp/%d.%lu",msg.pid,msg.tid);
 
@@ -26,7 +26,6 @@ void *thr_func(void *arg)
     msg.pid = getppid();
     msg.tid = pthread_self();
 
-    printf("Writing to client\n");
     write(fd, &msg, sizeof(message));
     close(fd);
 
@@ -46,14 +45,9 @@ int main(int argc, char * argv[]){
     }
 
     printArgs(&a);
-
-    time_t endwait;
-    time_t start = time(NULL);
-    time_t seconds = a.nsecs; // end loop after this time has elapsed
-    endwait = start + seconds;
     
     char fifoName[FIFONAME_SIZE+5];
-    sprintf(fifoName,"/tmp/%s",a.fifoname);
+    sprintf(fifoName,"/tmp/%s",a.fifoName);
 
     if(mkfifo(fifoName,0660) < 0){
         if (errno == EEXIST){
@@ -72,22 +66,20 @@ int main(int argc, char * argv[]){
 
     while(1){
 
-    if ((fd = open(fifoName,O_RDONLY)) != -1)
-        printf("FIFO '%s' openned in READONLY mode\n", fifoName);
+    int fd = open(fifoName,O_RDONLY);
+    if(fd == -1){
+        fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoName);
+        exit(ERROR);
+    }
 
-    struct message * msg = (struct message *) malloc(sizeof(struct message));
+    message * msg = (message *) malloc(sizeof(message));
     
-    if(read(fd,msg, sizeof(struct message)) < 0){
+    if(read(fd,msg, sizeof(message)) < 0){
         fprintf(stderr, "Couldn't read from %d.",fd);
         exit(ERROR);
     }
 
-    printf("Numero do pedido = %d\n", msg->i);
-    printf("Pid = %d\n", msg->pid);
-    printf("Tid = %ld\n", msg->tid);
-    printf("Duracao = %d\n", msg->dur);
-    printf("Lugar atribuido = %d\n", msg->pl);
-    printf("\n");
+    printMsg(msg);
 
     msg->pl = placeNum;
     placeNum ++;
