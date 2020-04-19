@@ -17,7 +17,7 @@ int main(int argc, char * argv[]){
 
     printArgs(&a);
 
-    if ( logOP(CLOSD,2,24,4) != OK )
+    if (logOP(CLOSD,2,24,4) != OK )
         return ERROR;
 
     exit(OK);

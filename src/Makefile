@@ -7,23 +7,23 @@ begin:
 
 generate:
 		@echo "Creating ouput files..."
-		gcc U1.c utils.c logging.c -o U1.o -Wall -lpthread -D_REENTRANT
-		gcc Q1.c utils.c logging.c -o Q1.o -Wall -lpthread -D_REENTRANT
+		gcc U1.c utils.c logging.c -o U1 -Wall -lpthread -D_REENTRANT
+		gcc Q1.c utils.c logging.c -o Q1 -Wall -lpthread -D_REENTRANT
 
 runU: begin generate
 		@echo "## Starting running U ##"
-		./U1.o
+		./U1
 
 runQ: begin generate
 		@echo "## Starting running Q ##"
-		./Q1.o
+		./Q1
 
 logU: begin generate
-		./U1.o > ../logs/logU.txt
+		./U1 > ../logs/logU.txt
 
 logQ: begin generate
-		./Q1.o > ../logs/logQ.txt
+		./Q1 > ../logs/logQ.txt
 
 clean:
 		@echo "Cleaning up..."
-		-rm U1.o Q1.o -f
+		-rm U1 Q1 -f
