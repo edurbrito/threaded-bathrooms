@@ -9,6 +9,7 @@
 
 ## Estrutura:
 - recolhe os argumentos de linha de comando;
+- cria o o fifo "fifoname";
 - recebe ciclicamente pedidos de clientes
 
 - <strong>se e só se não estiver a encerrar </strong> atende pedidos, sendo cada pedido atendido por um thread, que comunica com o thread cliente:
@@ -48,7 +49,7 @@ Envia pedidos de acesso ao servidor de forma (pseudo)aleatória (em termos de du
 >     - pid - identificador de sistema do processo cliente
 >     - tid - identificador no sistema do thread cliente
 > -  gera aleatoriamente parâmetros do pedido pelo qual é responsável (especificamente, a duração do acesso)
-> - comunica com o servidor enviando-lhe uma *mensagem* com o tempo que pretende utilizá-lo ('*dur*'), o seu *'pid'*/'*tid*' e um '*id*' sequencial (os pedidos são enviados ao servidor através do canal público (fifoname);
+> - comunica com o servidor enviando-lhe uma *mensagem* com o tempo que pretende utilizá-lo ('*dur*'), o seu *'pid'*/'*tid*' e um '*id*' sequencial (os pedidos são enviados ao servidor através do canal público ("fifoname");
 > - recebe resposta do servidor pelo canal privado com nome criado ("/tmp/pid.tid")
 > - elimina canal "/tmp/pid.tid"
 > - termina - o atendimento do pedido está completo

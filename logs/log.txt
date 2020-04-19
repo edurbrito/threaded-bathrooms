@@ -1,0 +1,7 @@
+1587243585 ; 2 ; 21581 ; 140648298837824 ; 24 ; 4 ; CLOSD
+###### ARGS ######
+nsecs = 1
+nplaces = -1
+nthreads = -1
+fifoname = aa
+###### ARGS ######
