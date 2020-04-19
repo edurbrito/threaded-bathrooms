@@ -19,18 +19,20 @@ void *thr_func(void *arg)
 
     int fd = open(fifoName,O_WRONLY);
     if(fd == -1){
-        fprintf(stderr,"Erro opening %s in WRITEONLY mode.\n",fifoName);
+        fprintf(stderr,"Error opening %s in WRITEONLY mode.\n",fifoName);
         exit(ERROR);
     }
 
     msg.pid = getppid();
     msg.tid = pthread_self();
 
+    printf("Writing to client\n");
     write(fd, &msg, sizeof(message));
+    close(fd);
 
     free(arg);
 
-    pthread_exit(0);
+    return NULL;
 }
 
 int main(int argc, char * argv[]){
@@ -68,26 +70,31 @@ int main(int argc, char * argv[]){
     int threadNum = 0;
     pthread_t threads[MAX_THREADS];
 
-    while(start < endwait){
+    while(1){
 
-        if ((fd = open(fifoName,O_RDONLY|O_NONBLOCK)) == OK){
+    if ((fd = open(fifoName,O_RDONLY)) != -1)
+        printf("FIFO '%s' openned in READONLY mode\n", fifoName);
 
-            struct message * msg = (struct message *) malloc(sizeof(struct message));
-            
-            int r = read(fd,msg, sizeof(struct message));
-            if((r = read(fd,msg, sizeof(struct message))) != OK){
-                fprintf(stderr, "Couldn't read from %d.",fd);
-                exit(ERROR);
-            }
-            else if(r == sizeof(struct message)){
-                msg->pl = placeNum;
-                placeNum ++;
+    struct message * msg = (struct message *) malloc(sizeof(struct message));
+    
+    if(read(fd,msg, sizeof(struct message)) < 0){
+        fprintf(stderr, "Couldn't read from %d.",fd);
+        exit(ERROR);
+    }
 
-                pthread_create(&threads[threadNum], NULL, thr_func, (void *)msg);
-                threadNum ++;
-            }
-        }
-        start = time(NULL);
+    printf("Numero do pedido = %d\n", msg->i);
+    printf("Pid = %d\n", msg->pid);
+    printf("Tid = %ld\n", msg->tid);
+    printf("Duracao = %d\n", msg->dur);
+    printf("Lugar atribuido = %d\n", msg->pl);
+    printf("\n");
+
+    msg->pl = placeNum;
+    placeNum ++;
+
+    pthread_create(&threads[threadNum], NULL, thr_func, msg);
+    threadNum ++;
+        
     }
 
     for(int i = 0; i < threadNum; i++){

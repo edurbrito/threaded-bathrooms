@@ -15,10 +15,10 @@ void * clients_request(void * arg) {
 
     struct clientparameters *parameters = (struct clientparameters *)arg;
     struct message msg;
-    char fifoclient[40];
+    char fifoclient[FIFONAME_SIZE];
     int fdwrite, fdread;
 
-    sprintf(fifoclient, "/tmp/fifo_cliente_%d.%ld", getpid(), pthread_self());
+    sprintf(fifoclient, "/tmp/%d.%lu", getpid(), pthread_self());
 
     //Cria o fifo para o cliente ler a informacao do servidor
     if(mkfifo(fifoclient,0660) < 0){
@@ -40,6 +40,7 @@ void * clients_request(void * arg) {
     msg.i = parameters->id;
     strcpy(msg.fifoname, fifoclient);
 
+    printf("Sending message\n");
     write(fdwrite, &msg, sizeof(struct message));
     close(fdwrite);
 
@@ -47,8 +48,8 @@ void * clients_request(void * arg) {
         printf("FIFO %s openned in READONLY mode\n", fifoclient);
 
     //Abre o ficheiro para ler do servidor a resposta
-    if (read(fdread, &msg, sizeof(struct message)) != OK) {
-        fprintf(stderr, "Couldn't read from %d", fdwrite);
+    if (read(fdread, &msg, sizeof(struct message)) < 0) {
+        fprintf(stderr, "Couldn't read from %d", fdread);
         exit(ERROR);
     }
 
@@ -66,6 +67,7 @@ void * clients_request(void * arg) {
         printf("Tid = %ld\n", msg.tid);
         printf("Duracao = %d\n", msg.dur);
         printf("Lugar atribuido = %d\n", msg.pl);
+        printf("\n");
     }
 
     return NULL;
@@ -91,11 +93,9 @@ int main(int argc, char * argv[]){
         exit(ERROR);
     }
 
-    strcpy(parameters->fifoname, a.fifoname);
+    sprintf(parameters->fifoname,"/tmp/%s",a.fifoname);
 
     for (int i = 0 ; i < 3; i++) {
-
-        usleep(1000);
 
         parameters->id = i;
 
@@ -108,6 +108,7 @@ int main(int argc, char * argv[]){
         pthread_create(&client_thread_array[i], NULL, clients_request, (void *)parameters);
 
         client_thread_array_size++;
+        usleep(5000000);
     }
 
     for (int i = 0; i < client_thread_array_size; i++) {
