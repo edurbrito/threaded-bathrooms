@@ -106,7 +106,7 @@ int main(int argc, char * argv[]){
         pthread_create(&client_thread_array[i], NULL, clients_request, (void *)params);
 
         client_thread_array_size++;
-        usleep(5000000);
+        sleep(5);
     }
 
     for (int i = 0; i < client_thread_array_size; i++) {

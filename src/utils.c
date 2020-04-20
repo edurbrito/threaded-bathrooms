@@ -108,7 +108,7 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
 }
 
 void buildMsg(message * msg,int id){
-    msg->dur = (rand() % 2) + 1;
+    msg->dur = (rand() % 10) + 1;
     msg->pid = getpid();
     msg->tid = pthread_self();
     msg->i = id;
