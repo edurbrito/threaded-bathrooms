@@ -25,15 +25,17 @@ void * clients_request(void * arg) {
         if (errno == EEXIST)
             printf("FIFO '%s' already exists.\n",params->fifoName);
         else {
-            printf("Can't create FIFO %s.\n",params->fifoName); 
-            exit(ERROR);
+            fprintf(stderr,"Can't create FIFO %s.\n",params->fifoName); 
+            //exit(ERROR);
         }
     }
 
-    fdwrite = open(params->fifoName, O_WRONLY);
-    if(fdwrite == -1){
+    if((fdwrite = open(params->fifoName, O_WRONLY)) == -1){
         fprintf(stderr,"Error opening %s in WRITEONLY mode.\n",params->fifoName);
-        exit(ERROR);
+        if(unlink(fifoClient) < 0){
+            fprintf(stderr, "Error when destroying %s.'\n",fifoClient);
+        }
+        return NULL;
     }
 
     buildMsg(&msg, params->id);
@@ -41,18 +43,26 @@ void * clients_request(void * arg) {
     strcpy(msg.fifoName, fifoClient);
 
     // Send message to server
-    write(fdwrite, &msg, sizeof(message));
+    if((write(fdwrite, &msg, sizeof(message))) == -1){
+        fprintf(stderr,"Error sending message to Server.\n");
+        //exit(ERROR);
+    }
     close(fdwrite);
 
-    fdread = open(fifoClient,O_RDONLY);
-    if(fdread == -1){
+    if((fdread = open(fifoClient,O_RDONLY)) == -1){
         fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoClient);
-        exit(ERROR);
+        //exit(ERROR);
     }
 
     // Receive message from server
     if (read(fdread, &msg, sizeof(message)) < 0) {
         fprintf(stderr, "Couldn't read from %d", fdread);
+        //exit(ERROR);
+    }
+    close(fdread);
+
+    if(unlink(fifoClient) < 0){
+        fprintf(stderr, "Error when destroying %s.'\n",fifoClient);
         exit(ERROR);
     }
 

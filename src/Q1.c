@@ -11,26 +11,33 @@
 #include "types.h"
 #include "logging.h"
 
-void *thr_func(void *arg){
+void * handle_request(void *arg){
 
     message msg = *(message *) arg;
     char fifoName[FIFONAME_SIZE];
     sprintf(fifoName,"/tmp/%d.%lu",msg.pid,msg.tid);
+    int fd;
 
-    int fd = open(fifoName,O_WRONLY);
-    if(fd == -1){
+    if((fd = open(fifoName,O_WRONLY)) == -1){
         fprintf(stderr,"Error opening %s in WRITEONLY mode.\n",fifoName);
-        exit(ERROR);
+        //exit(ERROR);
     }
 
     msg.pid = getppid();
     msg.tid = pthread_self();
 
-    write(fd, &msg, sizeof(message));
+    if(write(fd, &msg, sizeof(message)) == -1){
+        fprintf(stderr,"Error writing response to Client.\n");
+        //exit(ERROR);
+    }
     close(fd);
 
     free(arg);
 
+    return NULL;
+}
+
+void * refuse_request(void * arg){
     return NULL;
 }
 
@@ -63,29 +70,39 @@ int main(int argc, char * argv[]){
     int placeNum = 0;
     int threadNum = 0;
     pthread_t threads[MAX_THREADS];
+    time_t t = time(NULL) + a.nsecs;
 
-    while(1){
-
-    int fd = open(fifoName,O_RDONLY);
-    if(fd == -1){
+    if((fd = open(fifoName,O_RDONLY)) == -1){
         fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoName);
-        exit(ERROR);
+
+        if(unlink(fifoName) < 0){
+            fprintf(stderr, "Error when destroying %s.'\n",fifoName);
+            exit(ERROR);
+        }
     }
 
-    message * msg = (message *) malloc(sizeof(message));
-    
-    if(read(fd,msg, sizeof(message)) < 0){
-        fprintf(stderr, "Couldn't read from %d.",fd);
-        exit(ERROR);
-    }
+    while(time(NULL) < t){
 
-    printMsg(msg);
+        message * msg = (message *) malloc(sizeof(message));
+        
+        int r;
+        if((r = read(fd,msg, sizeof(message))) < 0){
+            free(msg);
+            fprintf(stderr, "Couldn't read from %d.",fd);
+            break;
+        }
+        else if(r == 0){
+            free(msg);
+            continue;
+        }
 
-    msg->pl = placeNum;
-    placeNum ++;
+        printMsg(msg);
 
-    pthread_create(&threads[threadNum], NULL, thr_func, msg);
-    threadNum ++;
+        msg->pl = placeNum;
+        placeNum ++;
+
+        pthread_create(&threads[threadNum], NULL, handle_request, msg);
+        threadNum ++;
         
     }
 
