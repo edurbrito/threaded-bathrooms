@@ -81,9 +81,11 @@ void * server_closing(void * arg){
         
         int r;
         if((r = read(fd,msg, sizeof(message))) < 0){
-            free(msg);
-            fprintf(stderr, "Couldn't read from %d.",fd);
-            break;  
+            if(isNonBlockingError() == OK){
+                return NULL;
+            }
+            else
+                continue;
         }
         else if(r == 0){
             free(msg);
@@ -131,15 +133,16 @@ int main(int argc, char * argv[]){
     pthread_t threads[MAX_THREADS];
     time_t t = time(NULL) + a.nsecs;
 
-
-    if((fd = open(fifoName,O_RDONLY)) == -1){
-        printf("HERE\n");
+    if((fd = open(fifoName,O_RDONLY|O_NONBLOCK)) == -1){
         fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoName);
         if(unlink(fifoName) < 0){
             fprintf(stderr, "Error when destroying %s.'\n",fifoName);
             exit(ERROR);
         }
+        exit(ERROR);
     }
+
+    setNonBlockingFifo(fd);
 
     while(time(NULL) < t){
 
@@ -147,9 +150,11 @@ int main(int argc, char * argv[]){
         
         int r;
         if((r = read(fd,msg, sizeof(message))) < 0){
-            free(msg);
-            fprintf(stderr, "Couldn't read from %d.",fd);
-            break;  
+            if(isNonBlockingError() == OK){
+                break;
+            }
+            else
+                continue;
         }
         else if(r == 0){
             free(msg);

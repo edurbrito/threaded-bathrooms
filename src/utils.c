@@ -5,6 +5,8 @@
 #include "utils.h"
 #include "types.h" 
 #include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
 
 void printArgs(args * a){
     printf("###### ARGS ######\n");
@@ -125,4 +127,18 @@ void printMsg(message * msg){
         printf("Bathroom closed\n");
     printf("###### MESSAGE ######\n\n");
 
+}
+
+void setNonBlockingFifo(int fd){
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    errno = 0; 
+}
+
+int isNonBlockingError(){
+    if(errno != EAGAIN && errno != EWOULDBLOCK){
+        perror("Error in read\n");
+        return OK;
+    }
+    return ERROR;
 }

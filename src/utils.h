@@ -29,8 +29,29 @@ void printArgs(args * a);
  */
 int checkArgs(int argc, char * argv[], args * a, caller C);
 
+/** 
+ * @brief Build the message to be sent to the Server
+ * @param msg the message to fill with the correct parameters
+ * @param id the number of the Client's request
+ */
 void buildMsg(message * msg,int id);
 
+/** 
+ * @brief Print message sent from client to server or from server to cliente (for testing purposes)
+ * @param msg the message to print
+ */
 void printMsg(message * msg);
+
+/** 
+ * @brief Set Fifo as NonBlocking
+ * @param fd the descriptor to be set to Non Blocking
+ */
+void setNonBlockingFifo(int fd);
+
+/** 
+ * @brief Check if the error was caused by the fact that the Fifo is Non Blocking Fifo
+ * @return OK if the error is caused by the Non Blocking Fifo
+ */
+int isNonBlockingError();
 
 #endif
