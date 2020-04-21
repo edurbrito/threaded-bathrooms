@@ -110,10 +110,11 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
 }
 
 void buildMsg(message * msg,int id){
-    time_t t;
-    srand((unsigned) time(&t));
+    
+    int upper = 9999;
+    int lower = 1000;
 
-    msg->dur = (rand() % 10) + 1;
+    msg->dur = (rand() % (upper-lower)) + lower;
     msg->pid = getpid();
     msg->tid = pthread_self();
     msg->i = id;

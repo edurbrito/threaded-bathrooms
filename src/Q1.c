@@ -34,8 +34,8 @@ void * handle_request(void *arg){
 
     free(arg);
 
-    unsigned int remainingSec = msg.dur;
-    while((remainingSec = sleep(remainingSec)) != 0){}
+    unsigned int remainingTime = msg.dur;
+    while((remainingTime = usleep(remainingTime)) != 0){}
 
     return NULL;
 }

@@ -31,7 +31,7 @@ void * clients_request(void * arg) {
     }
 
     if((fdwrite = open(params->fifoName, O_WRONLY)) == -1){
-        fprintf(stderr,"Error opening %s in WRITEONLY mode.\n",params->fifoName);
+        fprintf(stderr,"Closed server (Error opening %s in WRITEONLY mode).\n",params->fifoName);
         if(unlink(fifoClient) < 0){
             fprintf(stderr, "Error when destroying %s.'\n",fifoClient);
         }
@@ -109,7 +109,7 @@ int main(int argc, char * argv[]){
         pthread_create(&threads[threadNum], NULL, clients_request, (void *)params);
 
         threadNum++;
-        sleep(5);
+        usleep(5000);
     }
 
     for (int i = 0; i < threadNum; i++) {
