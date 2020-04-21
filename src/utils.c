@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 
 void printArgs(args * a){
     printf("###### ARGS ######\n");

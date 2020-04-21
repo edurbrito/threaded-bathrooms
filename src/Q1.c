@@ -20,7 +20,7 @@ void * handle_request(void *arg){
 
     if((fd = open(fifoName,O_WRONLY)) == -1){
         fprintf(stderr,"Error opening %s in WRITEONLY mode.\n",fifoName);
-        //exit(ERROR);
+        return NULL;
     }
 
     msg.pid = getppid();
@@ -28,7 +28,7 @@ void * handle_request(void *arg){
 
     if(write(fd, &msg, sizeof(message)) == -1){
         fprintf(stderr,"Error writing response to Client.\n");
-        //exit(ERROR);
+        return NULL;
     }
     close(fd);
 
@@ -49,7 +49,7 @@ void * refuse_request(void *arg){
 
     if((fd = open(fifoName,O_WRONLY)) == -1){
         fprintf(stderr,"Error opening %s in WRITEONLY mode.\n",fifoName);
-        //exit(ERROR);
+        return NULL;
     }
 
     msg.pid = getppid();
@@ -59,7 +59,7 @@ void * refuse_request(void *arg){
 
     if(write(fd, &msg, sizeof(message)) == -1){
         fprintf(stderr,"Error writing response to Client.\n");
-        //exit(ERROR);
+        return NULL;
     }
     close(fd);
 
@@ -71,7 +71,7 @@ void * refuse_request(void *arg){
 void * server_closing(void * arg){
 
     int fd = *(int*)arg;
-    pthread_t threads[MAX_CLOSING_SERVER_THREADS];
+    pthread_t threads[MAX_THREADS];
     int threadNum = 0;
     free(arg);
 
@@ -89,7 +89,7 @@ void * server_closing(void * arg){
         }
         else if(r == 0){
             free(msg);
-            continue;
+            break;
         }
 
         printMsg(msg);
@@ -97,7 +97,12 @@ void * server_closing(void * arg){
         pthread_create(&threads[threadNum], NULL, refuse_request, msg);
         threadNum ++;
         
-    };
+    }
+
+    // Wait for the threads that will inform clients that made requests when server was closing
+    for(int i = 0; i < threadNum ; i++){
+        pthread_join(threads[i],NULL);
+    }
 
     return NULL;
 }
@@ -106,6 +111,7 @@ int main(int argc, char * argv[]){
 
     args a;
 
+    // Check arguments
     if (checkArgs(argc, argv, &a, Q) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> [-l nplaces] [-n nthreads] fifoname\n",argv[0]);
         logOP(CLOSD,1,12,2);
@@ -114,9 +120,11 @@ int main(int argc, char * argv[]){
 
     printArgs(&a);
     
+    
     char fifoName[FIFONAME_SIZE+5];
     sprintf(fifoName,"/tmp/%s",a.fifoName);
 
+    // Create Fifo to receive client's requests
     if(mkfifo(fifoName,0660) < 0){
         if (errno == EEXIST){
             printf("Fifo '%s' already exists.\n",fifoName);
@@ -132,12 +140,13 @@ int main(int argc, char * argv[]){
     pthread_t * threads = (pthread_t *)malloc(0);
 
     if (threads == NULL) {
-        printf("Error! memory not allocated.");
+        printf("Error allocating memory.\n");
         exit(ERROR);
     }
 
     time_t t = time(NULL) + a.nsecs;
-
+    
+    // Open Fifo in READ ONLY mode to read client's requests
     if((fd = open(fifoName,O_RDONLY|O_NONBLOCK)) == -1){
         fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoName);
         if(unlink(fifoName) < 0){
@@ -147,14 +156,16 @@ int main(int argc, char * argv[]){
         exit(ERROR);
     }
 
+    // Don't block Fifo if no requests are ready to read
     setNonBlockingFifo(fd);
 
+    // Receive client's requests during defined time interval
     while(time(NULL) < t){
 
         message * msg = (message *) malloc(sizeof(message));
         
         int r;
-        // Read message from client
+        // Read message from client if it exists (without blocking)
         if((r = read(fd,msg, sizeof(message))) < 0){
             if(isNonBlockingError() == OK){
                 free(msg);
@@ -174,6 +185,7 @@ int main(int argc, char * argv[]){
         msg->pl = placeNum;
         placeNum ++;
 
+        // Allocate space for one more thread
         threads = (pthread_t *) realloc(threads, (threadNum + 1)*sizeof(pthread_t));
         if (threads == NULL) {
             fprintf(stderr,"Reallocation failed\n");
@@ -181,37 +193,49 @@ int main(int argc, char * argv[]){
         }
 
         // Create thread to handle the request of the client
-        pthread_create(&threads[threadNum], NULL, handle_request, msg);
+        if(pthread_create(&threads[threadNum], NULL, handle_request, msg) != OK){
+            free(msg);
+            fprintf(stderr,"Error creating thread.\n");
+            break;
+        }
+
         threadNum ++;        
     }
 
-    // Deal with threads when the server is closing
+    // Save Fifo file descriptor to send to thread 
     int * fd1 = (int*)malloc(sizeof(int));
     *fd1 = fd;
+
+    // Create thread to handle requests while server is closing
     threads = (pthread_t *) realloc(threads, (threadNum + 1)*sizeof(pthread_t));
     pthread_create(&threads[threadNum], NULL, server_closing,fd1);
+    threadNum ++;  
 
     // Wait for all threads to finish except the ones thrown when server was already closing
-    for(int i = 0; i < threadNum ; i++){
+    for(int i = 0; i < threadNum-1 ; i++){
         pthread_join(threads[i],NULL);
     }
 
+    // Close the server -> stop receiving requests
     if(unlink(fifoName) < 0){
         fprintf(stderr, "Error when destroying %s.'\n",fifoName);
         exit(ERROR);
     }
 
-    free(fd1);
-    free(threads);
-    
     printf("Fifo %s destroyed.\n",fifoName);
-    exit(ERROR);
 
     /*if ( logOP(CLOSD,2,24,4) != OK )
         return ERROR;*/
     
+    // Wait for the thread that is handling the requests sent when the server was closing
+    pthread_join(threads[threadNum-1],NULL);
+
+    free(fd1);
     close(fd);
 
-    exit(0);
+    free(threads);
+
+
+    pthread_exit(OK);
 
 }

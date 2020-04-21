@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <signal.h>
 #include <fcntl.h>
 #include "utils.h"
 #include "types.h"
@@ -16,7 +17,7 @@ void * clients_request(void * arg) {
     clientParams *params = (struct clientParams *)arg;
     message msg;
     char fifoClient[FIFONAME_SIZE];
-    int fdwrite, fdread;
+    int fdread;
 
     sprintf(fifoClient, "/tmp/%d.%lu", getpid(), pthread_self());
 
@@ -26,16 +27,8 @@ void * clients_request(void * arg) {
             printf("FIFO '%s' already exists.\n",params->fifoName);
         else {
             fprintf(stderr,"Can't create FIFO %s.\n",params->fifoName); 
-            //exit(ERROR);
+            return NULL;
         }
-    }
-
-    if((fdwrite = open(params->fifoName, O_WRONLY)) == -1){
-        fprintf(stderr,"Closed server (Error opening %s in WRITEONLY mode).\n",params->fifoName);
-        if(unlink(fifoClient) < 0){
-            fprintf(stderr, "Error when destroying %s.'\n",fifoClient);
-        }
-        return NULL;
     }
 
     buildMsg(&msg, params->id);
@@ -43,27 +36,26 @@ void * clients_request(void * arg) {
     strcpy(msg.fifoName, fifoClient);
 
     // Send message to server
-    if((write(fdwrite, &msg, sizeof(message))) == -1){
+    if((write(params->fdwrite, &msg, sizeof(message))) == -1){
         fprintf(stderr,"Error sending message to Server.\n");
-        //exit(ERROR);
+        return NULL;
     }
-    close(fdwrite);
 
     if((fdread = open(fifoClient,O_RDONLY)) == -1){
         fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoClient);
-        //exit(ERROR);
+        return NULL;
     }
 
     // Receive message from server
     if (read(fdread, &msg, sizeof(message)) < 0) {
         fprintf(stderr, "Couldn't read from %d", fdread);
-        //exit(ERROR);
+        return NULL;
     }
     close(fdread);
 
     if(unlink(fifoClient) < 0){
         fprintf(stderr, "Error when destroying %s.'\n",fifoClient);
-        exit(ERROR);
+        return NULL;
     }
 
     printMsg(&msg);
@@ -94,6 +86,12 @@ int main(int argc, char * argv[]){
     sprintf(params->fifoName,"/tmp/%s",a.fifoName);
 
     time_t t = time(NULL) + a.nsecs;
+    struct stat stat_buf;
+
+    if((params->fdwrite = open(params->fifoName, O_WRONLY)) == -1){
+        free(params);
+        exit(ERROR);
+    }
 
     while(time(NULL) < t){
 
@@ -106,7 +104,18 @@ int main(int argc, char * argv[]){
             exit(ERROR);
         }
 
-        pthread_create(&threads[threadNum], NULL, clients_request, (void *)params);
+        if (lstat(params->fifoName, &stat_buf) == -1){
+            break;
+        }
+        if(!S_ISFIFO(stat_buf.st_mode)){
+            break;
+        }
+           
+
+        if(pthread_create(&threads[threadNum], NULL, clients_request, (void *)params)){
+            fprintf(stderr,"Error creating thread.\n");
+            break;
+        }
 
         threadNum++;
         usleep(5000);
@@ -115,6 +124,8 @@ int main(int argc, char * argv[]){
     for (int i = 0; i < threadNum; i++) {
         pthread_join(threads[i], NULL);
     }
+
+    close(params->fdwrite);
 
     free(threads);
     free(params);

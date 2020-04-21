@@ -6,7 +6,7 @@
 #define OK 0
 #define ERROR 1
 #define FIFONAME_SIZE 200
-#define MAX_CLOSING_SERVER_THREADS 20
+#define MAX_THREADS 10000
 
 typedef enum{ U, Q } caller;
 
@@ -29,7 +29,7 @@ typedef struct message {
 typedef struct clientParams {
     char fifoName[FIFONAME_SIZE+5];
     int id;
+    int fdwrite;
 }clientParams;
-
 
 #endif
