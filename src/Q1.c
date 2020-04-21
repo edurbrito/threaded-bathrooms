@@ -71,7 +71,7 @@ void * refuse_request(void *arg){
 void * server_closing(void * arg){
 
     int fd = *(int*)arg;
-    pthread_t threads[MAX_THREADS];
+    pthread_t threads[MAX_CLOSING_SERVER_THREADS];
     int threadNum = 0;
     free(arg);
 
@@ -128,9 +128,14 @@ int main(int argc, char * argv[]){
     }
 
     int fd;
-    int placeNum = 0;
-    int threadNum = 0;
-    pthread_t threads[MAX_THREADS];
+    int placeNum = 0, threadNum = 0;
+    pthread_t * threads = (pthread_t *)malloc(0);
+
+    if (threads == NULL) {
+        printf("Error! memory not allocated.");
+        exit(ERROR);
+    }
+
     time_t t = time(NULL) + a.nsecs;
 
     if((fd = open(fifoName,O_RDONLY|O_NONBLOCK)) == -1){
@@ -149,8 +154,10 @@ int main(int argc, char * argv[]){
         message * msg = (message *) malloc(sizeof(message));
         
         int r;
+        // Read message from client
         if((r = read(fd,msg, sizeof(message))) < 0){
             if(isNonBlockingError() == OK){
+                free(msg);
                 break;
             }
             else
@@ -162,18 +169,29 @@ int main(int argc, char * argv[]){
         }
 
         printMsg(msg);
-
+        
+        // Set client's place number
         msg->pl = placeNum;
         placeNum ++;
 
+        threads = (pthread_t *) realloc(threads, (threadNum + 1)*sizeof(pthread_t));
+        if (threads == NULL) {
+            fprintf(stderr,"Reallocation failed\n");
+            exit(ERROR);
+        }
+
+        // Create thread to handle the request of the client
         pthread_create(&threads[threadNum], NULL, handle_request, msg);
         threadNum ++;        
     }
 
+    // Deal with threads when the server is closing
     int * fd1 = (int*)malloc(sizeof(int));
     *fd1 = fd;
+    threads = (pthread_t *) realloc(threads, (threadNum + 1)*sizeof(pthread_t));
     pthread_create(&threads[threadNum], NULL, server_closing,fd1);
 
+    // Wait for all threads to finish except the ones thrown when server was already closing
     for(int i = 0; i < threadNum ; i++){
         pthread_join(threads[i],NULL);
     }
@@ -182,6 +200,9 @@ int main(int argc, char * argv[]){
         fprintf(stderr, "Error when destroying %s.'\n",fifoName);
         exit(ERROR);
     }
+
+    free(fd1);
+    free(threads);
     
     printf("Fifo %s destroyed.\n",fifoName);
     exit(ERROR);

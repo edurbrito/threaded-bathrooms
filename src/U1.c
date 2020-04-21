@@ -75,43 +75,49 @@ int main(int argc, char * argv[]){
 
     args a;
 
-    int client_thread_array_size = 0;
-
-    clientParams * params = (clientParams *)malloc(sizeof(clientParams));
-
-    pthread_t * client_thread_array = (pthread_t *)malloc(0);
-    if (client_thread_array == NULL) {
-        printf("Error! memory not allocated.");
-        exit(ERROR);
-    }
-
-    if ( checkArgs(argc, argv, &a, U) != OK ){
+    if (checkArgs(argc, argv, &a, U) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         logOP(CLOSD,1,12,2);
         exit(ERROR);
     }
 
+    int id = 0, threadNum = 0;
+
+    clientParams * params = (clientParams *)malloc(sizeof(clientParams));
+
+    pthread_t * threads = (pthread_t *)malloc(0);
+    if (threads == NULL) {
+        printf("Error! memory not allocated.");
+        exit(ERROR);
+    }
+
     sprintf(params->fifoName,"/tmp/%s",a.fifoName);
 
-    for (int i = 0 ; i < 3; i++) {
+    time_t t = time(NULL) + a.nsecs;
 
-        params->id = i;
+    while(time(NULL) < t){
 
-        client_thread_array = (pthread_t *) realloc(client_thread_array, (i + 1)*sizeof(pthread_t));
-        if (client_thread_array == NULL) {
+        params->id = id;
+        id++;
+
+        threads = (pthread_t *) realloc(threads, (threadNum + 1)*sizeof(pthread_t));
+        if (threads == NULL) {
             fprintf(stderr,"Reallocation failed\n");
             exit(ERROR);
         }
 
-        pthread_create(&client_thread_array[i], NULL, clients_request, (void *)params);
+        pthread_create(&threads[threadNum], NULL, clients_request, (void *)params);
 
-        client_thread_array_size++;
+        threadNum++;
         sleep(5);
     }
 
-    for (int i = 0; i < client_thread_array_size; i++) {
-        pthread_join(client_thread_array[i], NULL);
+    for (int i = 0; i < threadNum; i++) {
+        pthread_join(threads[i], NULL);
     }
+
+    free(threads);
+    free(params);
 
     /*if ( logOP(CLOSD,2,24,4) != OK )
         return ERROR;*/
