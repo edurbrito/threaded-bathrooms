@@ -1,13 +1,13 @@
-#include <getopt.h>
-#include <string.h>
-#include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <fcntl.h> 
+#include <string.h>
+#include <getopt.h>
+#include <pthread.h>
 #include "utils.h"
 #include "types.h" 
-#include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <signal.h>
 
 void printArgs(args * a){
     printf("###### ARGS ######\n");
@@ -110,15 +110,26 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
     return OK;
 }
 
-void buildMsg(message * msg,int id){
+void * timeChecker(void * arg){
     
-    int upper = 9999;
-    int lower = 1000;
+    int * terminated = (int *) arg;
 
-    msg->dur = (rand() % (upper-lower)) + lower;
+    int nsecs = terminated[0];
+    sleep(nsecs);
+
+    terminated[1] = 1;
+    
+    return NULL;
+}
+
+void buildMsg(message * msg, int id, char * fifoClient){
+    
+    int r = 1 + rand() % 250; // From 1 to 250
+    msg->dur = 100 * r;
     msg->pid = getpid();
     msg->tid = pthread_self();
     msg->i = id;
+    strcpy(msg->fifoName, fifoClient);
 }
 
 void printMsg(message * msg){

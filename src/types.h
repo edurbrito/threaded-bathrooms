@@ -1,12 +1,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <pthread.h>
-
 #define OK 0
 #define ERROR 1
 #define FIFONAME_SIZE 200
-#define MAX_THREADS 10000
+#define MAX_THREADS 1000
 
 typedef enum{ U, Q } caller;
 
