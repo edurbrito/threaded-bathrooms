@@ -26,10 +26,4 @@ typedef struct message {
     char fifoName[FIFONAME_SIZE];
 } message;
 
-typedef struct clientParams {
-    char fifoName[FIFONAME_SIZE+5];
-    int id;
-    int fdwrite;
-}clientParams;
-
 #endif

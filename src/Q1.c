@@ -11,6 +11,8 @@
 #include "types.h"
 #include "logging.h"
 
+int server_fd;
+
 void * handle_request(void *arg){
 
     message msg = *(message *) arg;
@@ -70,9 +72,8 @@ void * refuse_request(void *arg){
 
 void * server_closing(void * arg){
 
-    int fd = *(int*)arg;
-    pthread_t threads[MAX_THREADS];
-    int threadNum = 0;
+    int threadNum = *(int *)arg;
+    pthread_t threads[MAX_THREADS-threadNum];
     free(arg);
 
     while(1){
@@ -80,7 +81,7 @@ void * server_closing(void * arg){
         message * msg = (message *) malloc(sizeof(message));
         
         int r;
-        if((r = read(fd,msg, sizeof(message))) < 0){
+        if((r = read(server_fd,msg, sizeof(message))) < 0){
             if(isNonBlockingError() == OK){
                 return NULL;
             }
@@ -135,19 +136,13 @@ int main(int argc, char * argv[]){
         }
     }
 
-    int fd;
     int placeNum = 0, threadNum = 0;
-    pthread_t * threads = (pthread_t *)malloc(0);
-
-    if (threads == NULL) {
-        printf("Error allocating memory.\n");
-        exit(ERROR);
-    }
+    pthread_t threads[MAX_THREADS];
 
     time_t t = time(NULL) + a.nsecs;
     
     // Open Fifo in READ ONLY mode to read client's requests
-    if((fd = open(fifoName,O_RDONLY|O_NONBLOCK)) == -1){
+    if((server_fd = open(fifoName,O_RDONLY|O_NONBLOCK)) == -1){
         fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoName);
         if(unlink(fifoName) < 0){
             fprintf(stderr, "Error when destroying %s.'\n",fifoName);
@@ -157,7 +152,7 @@ int main(int argc, char * argv[]){
     }
 
     // Don't block Fifo if no requests are ready to read
-    setNonBlockingFifo(fd);
+    setNonBlockingFifo(server_fd);
 
     // Receive client's requests during defined time interval
     while(time(NULL) < t){
@@ -166,7 +161,7 @@ int main(int argc, char * argv[]){
         
         int r;
         // Read message from client if it exists (without blocking)
-        if((r = read(fd,msg, sizeof(message))) < 0){
+        if((r = read(server_fd,msg, sizeof(message))) < 0){
             if(isNonBlockingError() == OK){
                 free(msg);
                 break;
@@ -184,14 +179,7 @@ int main(int argc, char * argv[]){
         // Set client's place number
         msg->pl = placeNum;
         placeNum ++;
-
-        // Allocate space for one more thread
-        threads = (pthread_t *) realloc(threads, (threadNum + 1)*sizeof(pthread_t));
-        if (threads == NULL) {
-            fprintf(stderr,"Reallocation failed\n");
-            exit(ERROR);
-        }
-
+        
         // Create thread to handle the request of the client
         if(pthread_create(&threads[threadNum], NULL, handle_request, msg) != OK){
             free(msg);
@@ -202,13 +190,10 @@ int main(int argc, char * argv[]){
         threadNum ++;        
     }
 
-    // Save Fifo file descriptor to send to thread 
-    int * fd1 = (int*)malloc(sizeof(int));
-    *fd1 = fd;
+    int * threadNumArg =  (int *) malloc(sizeof(t)); 
 
     // Create thread to handle requests while server is closing
-    threads = (pthread_t *) realloc(threads, (threadNum + 1)*sizeof(pthread_t));
-    pthread_create(&threads[threadNum], NULL, server_closing,fd1);
+    pthread_create(&threads[threadNum], NULL, server_closing,threadNumArg);
     threadNum ++;  
 
     // Wait for all threads to finish except the ones thrown when server was already closing
@@ -230,11 +215,7 @@ int main(int argc, char * argv[]){
     // Wait for the thread that is handling the requests sent when the server was closing
     pthread_join(threads[threadNum-1],NULL);
 
-    free(fd1);
-    close(fd);
-
-    free(threads);
-
+    close(server_fd);
 
     pthread_exit(OK);
 
