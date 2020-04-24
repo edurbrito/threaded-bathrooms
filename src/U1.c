@@ -13,7 +13,7 @@
 
 int fdserver = 0; // server file descriptor
 
-void * op(void * arg){
+void * client_request(void * arg){
 
     int id = * (int *) arg;
     message msg;
@@ -109,7 +109,7 @@ int main(int argc, char * argv[]){
 
         ids[threadNum] = threadNum;
 
-        if(pthread_create(&threads[threadNum], NULL, op, (void *) &ids[threadNum])){
+        if(pthread_create(&threads[threadNum], NULL, client_request, (void *) &ids[threadNum])){
             fprintf(stderr,"Error creating thread.\n");
             break;
         }
