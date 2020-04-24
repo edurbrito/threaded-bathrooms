@@ -125,7 +125,7 @@ int logOP(action a, int i , int dur, int pl){
     if( time(&seconds) == -1 )
         return ERROR; 
 
-    if( sprintf(str, "%ld ; %02d ; %d ; %ld ; %05d ; %02d ; %s\n", seconds, i, pid, tid, dur, pl, actions[a]) < 0 )
+    if( sprintf(str, "%ld ; %06d ; %06d ; %ld ; %06d ; %06d ; %s\n", seconds, i, pid, tid, dur, pl, actions[a]) < 0 )
         return ERROR;
 
     if( write(STDOUT_FILENO, str, strlen(str)) != strlen(str) )
@@ -154,7 +154,7 @@ void buildMsg(message * msg, int id, char * fifoClient){
     int r = 1 + rand() % 250; // From 1 to 250
     msg->dur = 100 * r;
     msg->pl = -1;
-    
+
     strcpy(msg->fifoName, fifoClient);
 }
 
