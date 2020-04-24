@@ -148,11 +148,13 @@ void * timeChecker(void * arg){
 
 void buildMsg(message * msg, int id, char * fifoClient){
     
-    int r = 1 + rand() % 250; // From 1 to 250
-    msg->dur = 100 * r;
+    msg->i = id;
     msg->pid = getpid();
     msg->tid = pthread_self();
-    msg->i = id;
+    int r = 1 + rand() % 250; // From 1 to 250
+    msg->dur = 100 * r;
+    msg->pl = -1;
+    
     strcpy(msg->fifoName, fifoClient);
 }
 
