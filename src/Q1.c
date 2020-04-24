@@ -94,12 +94,14 @@ void * server_closing(void * arg){
         
         int r;
         if((r = read(server_fd,msg, sizeof(message))) < 0){
-            if(isNonBlockingError() == OK){
+            if(isNotNonBlockingError() == OK){
                 free(msg);
-                return NULL;
+                break;
             }
-            else
+            else{
+                free(msg);
                 continue;
+            }
         }
         else if(r == 0){
             free(msg);
@@ -180,12 +182,14 @@ int main(int argc, char * argv[]){
         int r;
         // Read message from client if it exists (without blocking)
         if((r = read(server_fd, msg, sizeof(message))) < 0){
-            if(isNonBlockingError() == OK){
+            if(isNotNonBlockingError() == OK){
                 free(msg);
                 break;
             }
-            else
+            else{
+                free(msg);
                 continue;
+            }
         }
         else if(r == 0){ // EOF
             free(msg);
@@ -210,13 +214,13 @@ int main(int argc, char * argv[]){
 
     printf("Time is over... Threads will be joined.\n");
 
+    // Create thread to handle requests while server is closing
+    pthread_create(&threads[threadNum], NULL, server_closing, &threadNum);
+
     // Wait for all threads to finish except the ones thrown when server was already closing
     for(int i = 0; i < threadNum; i++){
         pthread_join(threads[i],NULL);
     }
-
-    // Create thread to handle requests while server is closing
-    pthread_create(&threads[threadNum], NULL, server_closing, &threadNum);
     
     // Wait for the thread that is handling the requests sent when the server was closing
     pthread_join(threads[threadNum],NULL);

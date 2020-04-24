@@ -151,7 +151,7 @@ void setNonBlockingFifo(int fd){
     errno = 0; 
 }
 
-int isNonBlockingError(){
+int isNotNonBlockingError(){
     if(errno != EAGAIN && errno != EWOULDBLOCK){
         perror("Error in read\n");
         return OK;

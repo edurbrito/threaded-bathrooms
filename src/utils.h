@@ -63,6 +63,6 @@ void setNonBlockingFifo(int fd);
  * @brief Check if the error was caused by the fact that the FIFO is Non Blocking FIFO
  * @return OK if the error is caused by the Non Blocking FIFO
  */
-int isNonBlockingError();
+int isNotNonBlockingError();
 
 #endif
