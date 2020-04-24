@@ -9,7 +9,6 @@
 #include <pthread.h> 
 #include "utils.h"
 #include "types.h"
-#include "logging.h"
 
 int server_fd;
 
@@ -22,6 +21,7 @@ void * handle_request(void *arg){
     int fd;
     if((fd = open(fifoName,O_WRONLY)) == -1){ // Opening Client FIFO
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
+        logOP(GAVUP,msg->i,msg->dur,msg->pl);
         return NULL;
     }
 
@@ -30,8 +30,10 @@ void * handle_request(void *arg){
 
     if(write(fd, msg, sizeof(message)) == -1){ // Writing to Client FIFO
         fprintf(stderr,"Error writing response to Client.\n");
+        logOP(GAVUP,msg->i,msg->dur,msg->pl);
         return NULL;
     }
+    logOP(ENTER,msg->i,msg->dur,msg->pl);
 
     close(fd);
 
@@ -54,6 +56,7 @@ void * refuse_request(void *arg){
     if((fd = open(fifoName,O_WRONLY)) == -1){
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
         free(arg);
+        logOP(GAVUP,msg.i,msg.dur,msg.pl);
         return NULL;
     }
 
@@ -65,8 +68,10 @@ void * refuse_request(void *arg){
     if(write(fd, &msg, sizeof(message)) == -1){
         fprintf(stderr,"Error writing response to Client.\n");
         free(arg);
+        logOP(GAVUP,msg.i,msg.dur,msg.pl);
         return NULL;
     }
+    logOP(TLATE,msg.i,msg.dur,msg.pl);
 
     close(fd);
 
@@ -95,10 +100,12 @@ void * server_closing(void * arg){
         int r;
         if((r = read(server_fd,msg, sizeof(message))) < 0){
             if(isNotNonBlockingError() == OK){
+                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 break;
             }
             else{
+                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 continue;
             }
@@ -107,8 +114,9 @@ void * server_closing(void * arg){
             free(msg);
             break;
         }
+        logOP(RECVD,msg->i,msg->dur,msg->pl);
 
-        printMsg(msg);
+        // printMsg(msg);
 
         pthread_create(&threads[threadNum], NULL, refuse_request, msg);
         threadNum++;
@@ -183,10 +191,12 @@ int main(int argc, char * argv[]){
         // Read message from client if it exists (without blocking)
         if((r = read(server_fd, msg, sizeof(message))) < 0){
             if(isNotNonBlockingError() == OK){
+                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 break;
             }
             else{
+                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 continue;
             }
@@ -194,13 +204,14 @@ int main(int argc, char * argv[]){
         else if(r == 0){ // EOF
             free(msg);
             continue;
-        }
-        
+        }        
+        logOP(RECVD,msg->i,msg->dur,msg->pl);
+
         // Set client's place number
         msg->pl = placeNum;
         placeNum++;
 
-        printMsg(msg);
+        // printMsg(msg);
         
         // Create thread to handle the request of the client
         if(pthread_create(&threads[threadNum], NULL, handle_request, msg) != OK){
@@ -211,8 +222,9 @@ int main(int argc, char * argv[]){
 
         threadNum++;        
     }
-
-    printf("Time is over... Threads will be joined.\n");
+    logOP(TIMUP,threadNum - 1, 0, placeNum);
+    
+    // printf("Time is over... Threads will be joined.\n");
 
     // Create thread to handle requests while server is closing
     pthread_create(&threads[threadNum], NULL, server_closing, &threadNum);
@@ -231,7 +243,7 @@ int main(int argc, char * argv[]){
         exit(ERROR);
     }
 
-    printf("FIFO '%s' destroyed.\n",fifoName);
+    // printf("FIFO '%s' destroyed.\n",fifoName);
     
     close(server_fd);
 

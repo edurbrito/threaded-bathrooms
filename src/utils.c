@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <fcntl.h> 
 #include <string.h>
+#include <time.h>
 #include <getopt.h>
 #include <pthread.h>
 #include "utils.h"
@@ -107,6 +108,29 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
     }*/
     strcpy(a->fifoName, tempargs.fifoName);
    
+    return OK;
+}
+
+
+int logOP(action a, int i , int dur, int pl){
+    
+    char *actions[] = { "IWANT", "RECVD", "ENTER", "IAMIN", "TIMUP", "2LATE", "CLOSD", "FAILD", "GAVUP"};
+
+    int pid = getpid();
+    long int tid = pthread_self();
+
+    char str[100];
+
+    time_t seconds; 
+    if( time(&seconds) == -1 )
+        return ERROR; 
+
+    if( sprintf(str, "%ld ; %02d ; %d ; %ld ; %05d ; %02d ; %s\n", seconds, i, pid, tid, dur, pl, actions[a]) < 0 )
+        return ERROR;
+
+    if( write(STDOUT_FILENO, str, strlen(str)) != strlen(str) )
+        return ERROR;
+
     return OK;
 }
 

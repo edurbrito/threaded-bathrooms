@@ -30,6 +30,16 @@ void printArgs(args * a);
 int checkArgs(int argc, char * argv[], args * a, caller C);
 
 /**
+ * @brief Appends some log info to the stdout
+ * @param a the action performed to be logged 
+ * @param i request order number 
+ * @param dur duration in milliseconds of the request
+ * @param pl place number gotten when requesting it
+ * @return OK if successful, ERROR if not
+*/
+int logOP(action a, int i , int dur, int pl);
+
+/**
  * @brief Thread function to measure remaining time for the program
  * that invoked it to terminate.
  * @arg the argument passed as a void pointer, corresponding to a 

@@ -8,6 +8,8 @@
 
 typedef enum{ U, Q } caller;
 
+typedef enum{ IWANT, RECVD, ENTER, IAMIN, TIMUP, TLATE, CLOSD, FAILD, GAVUP } action;
+
 typedef struct args {
     int nsecs;
     /*int nplaces;

@@ -19,7 +19,7 @@ int logOP(action a, int i , int dur, int pl){
     if( time(&seconds) == -1 )
         return ERROR; 
 
-    if( sprintf(str, "%ld ; %d ; %d ; %ld ; %d ; %d ; %s\n", seconds, i, pid, tid, dur, pl, actions[a]) < 0 )
+    if( sprintf(str, "%ld ; %02d ; %d ; %ld ; %05d ; %02d ; %s\n", seconds, i, pid, tid, dur, pl, actions[a]) < 0 )
         return ERROR;
 
     if( write(STDOUT_FILENO, str, strlen(str)) != strlen(str) )
