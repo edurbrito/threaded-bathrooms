@@ -15,8 +15,10 @@
 #include "utils.h"
 #include "types.h"
 
-int fdserver = 0; // server file descriptor
-Shared_memory *shmem;
+int fdserver = 0; // Server FIFO
+
+// To inform the Client process that the Server will not send any more responses to requests
+Shared_memory *shmem; 
 
 
 void * client_request(void * arg){
@@ -114,11 +116,13 @@ int main(int argc, char * argv[]){
 
     args a;
 
+    // Check the arguments
     if (checkArgs(argc, argv, &a, U) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
     }
 
+    // Attach shared memory created by the server
     if ((shmem = attach_shared_memory(SHM_NAME, sizeof(int))) == NULL){
         perror("CLIENT: could not attach shared memory");
         exit(ERROR);
