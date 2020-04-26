@@ -165,6 +165,11 @@ int main(int argc, char * argv[]){
 
         ids[threadNum] = threadNum;
 
+        if (lstat(filepath, &stat_buf) == -1 || !S_ISFIFO(stat_buf.st_mode)){
+            fprintf(stderr,"The file is not a FIFO...\n");        
+            exit(ERROR);
+        }
+
         if(pthread_create(&threads[threadNum], NULL, client_request, (void *) &ids[threadNum])){
             fprintf(stderr,"Error creating thread.\n");
             break;
