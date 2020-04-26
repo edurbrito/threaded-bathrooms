@@ -111,7 +111,6 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
     return OK;
 }
 
-
 int logOP(action a, int i , int dur, int pl){
     
     char *actions[] = { "IWANT", "RECVD", "ENTER", "IAMIN", "TIMUP", "2LATE", "CLOSD", "FAILD", "GAVUP"};
@@ -152,7 +151,7 @@ void buildMsg(message * msg, int id, char * fifoClient){
     msg->pid = getpid();
     msg->tid = pthread_self();
     int r = 1 + rand() % 250; // From 1 to 250
-    msg->dur = 100 * r;
+    msg->dur = 10000 * r;
     msg->pl = -1;
 
     strcpy(msg->fifoName, fifoClient);

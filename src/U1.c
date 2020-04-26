@@ -36,27 +36,27 @@ void * client_request(void * arg){
     // Sends message to server
     if((write(fdserver, &msg, sizeof(message))) == -1){
         fprintf(stderr,"Error sending message to Server.\n");
-        logOP(FAILD,msg.i,msg.dur,msg.pl);
+        //logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
-    logOP(IWANT,msg.i,msg.dur,msg.pl);
+    //logOP(IWANT,msg.i,msg.dur,msg.pl);
 
     if((fdread = open(fifoClient,O_RDONLY)) == -1){
         fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoClient);
-        logOP(FAILD,msg.i,msg.dur,msg.pl);
+        //logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
 
     // Receives message from server
     if (read(fdread, &msg, sizeof(message)) < 0) {
         fprintf(stderr, "Couldn't read from %d", fdread);
-        logOP(FAILD,msg.i,msg.dur,msg.pl);
+        //logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
-    if(msg.dur == -1 && msg.pl == -1)
-        logOP(CLOSD,msg.i,msg.dur,msg.pl);
-    else
-        logOP(IAMIN,msg.i,msg.dur,msg.pl);
+    //if(msg.dur == -1 && msg.pl == -1)
+        //logOP(CLOSD,msg.i,msg.dur,msg.pl);
+    //else
+        //logOP(IAMIN,msg.i,msg.dur,msg.pl);
 
     close(fdread);
 
@@ -65,7 +65,7 @@ void * client_request(void * arg){
         return NULL;
     }
 
-    // printMsg(&msg);
+     printMsg(&msg);
 
     return NULL;
 }
@@ -127,7 +127,7 @@ int main(int argc, char * argv[]){
         usleep(1000 * r); // Waiting a random number of milliseconds ranging between 1 ms and 250 ms
     }
 
-    // printf("Time is over... Threads will be joined.\n");
+     printf("Time is over... Threads will be joined.\n");
 
     // Here comes the thread's joinings
     for (int i = 0; i < threadNum; i++) {
