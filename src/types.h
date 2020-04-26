@@ -5,6 +5,7 @@
 #define ERROR 1
 #define FIFONAME_SIZE 200
 #define MAX_THREADS 300
+#define MAX_THREADS_TESTING 30
 #define SHM_NAME "/shm1"
 
 typedef enum{ U, Q } caller;

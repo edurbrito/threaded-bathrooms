@@ -58,7 +58,7 @@ void * client_request(void * arg){
     }
 
     // Try to read answer from server while the server is still sending answers
-    int r;
+    int r=0;
     
     // Try to read at least one time. Stop trying if the server as sent all answers already
     do{

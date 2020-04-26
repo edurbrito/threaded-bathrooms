@@ -19,7 +19,7 @@ Shared_memory *shmem;
 // To inform the thread that takes the requests when the server is closing that no more request should be read
 int server_open = 0;
 
-int threadsAvailable = 20; // Available threads in the Server
+int threadsAvailable = MAX_THREADS_TESTING; // Available threads in the Server
 
 int thread_pos = 0; // The next position of the accepted threads array to be filled
 int closing_pos = 0; // The next position of the refused threads array to be filled
@@ -119,7 +119,7 @@ void * refuse_request(void *arg){
 
 void * server_closing(void * arg){
 
-    pthread_t closingThreads[20] =  {0};
+    pthread_t closingThreads[MAX_THREADS_TESTING] =  {0};
     int noPlaceId = 0;
 
     // While the server is closing read requests
@@ -176,7 +176,7 @@ void * server_closing(void * arg){
     }
 
     // Wait for the threads that will inform clients that made requests when server was closing
-    for(int i = 0; i < noPlaceId && i < 20; i++){
+    for(int i = 0; i < noPlaceId && i < MAX_THREADS_TESTING; i++){
         pthread_join(closingThreads[i],NULL);
     }
 
@@ -224,7 +224,7 @@ int main(int argc, char * argv[]){
 
     int terminated[] = {a.nsecs, 0}; // Second element will be 1 if time is over, creating no more threads on main thread
     
-    pthread_t threads[20] = {0}, timechecker;
+    pthread_t threads[MAX_THREADS_TESTING] = {0}, timechecker;
 
     // Creating the synchronous thread that just checks if the time ended
     // Notifying the main thread with the @p terminated variable
@@ -329,7 +329,7 @@ int main(int argc, char * argv[]){
     }
 
     // Wait for all threads to finish except the ones thrown when server was already closing
-    for(int i = 0; i < placeId && i < 20; i++){
+    for(int i = 0; i < placeId && i < MAX_THREADS_TESTING; i++){
         pthread_join(threads[i],NULL);
         
         // Update number of available threads (add one available thread)
