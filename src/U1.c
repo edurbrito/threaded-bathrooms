@@ -31,7 +31,7 @@ void * client_request(void * arg){
     // Creates FIFO for the client to read info from server
     if(mkfifo(fifoClient, 0660) < 0){
         if (errno == EEXIST)
-            printf("FIFO '%s' already exists.\n", fifoClient);
+            fprintf(stderr,"FIFO '%s' already exists.\n", fifoClient);
         else {
             fprintf(stderr,"Can't create FIFO '%s'.\n", fifoClient); 
             return NULL;
@@ -43,14 +43,15 @@ void * client_request(void * arg){
     // Sends message to server
     if((write(fdserver, &msg, sizeof(message))) == -1){
         fprintf(stderr,"Error sending message to Server.\n");
-        //logOP(FAILD,msg.i,msg.dur,msg.pl);
+        logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
-    //logOP(IWANT,msg.i,msg.dur,msg.pl);       
+
+    logOP(IWANT,msg.i,msg.dur,msg.pl);       
     
     if((fdread = open(fifoClient,O_RDONLY|O_NONBLOCK)) == -1){
         fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoClient);
-        //logOP(FAILD,msg.i,msg.dur,msg.pl);
+        logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
 
@@ -74,13 +75,14 @@ void * client_request(void * arg){
     // No more answers are being sent by the server and this request did not receive an answer
     if(r <= 0){
         fprintf(stderr, "Couldn't read from %d", fdread);
-        //logOP(FAILD,msg.i,msg.dur,msg.pl);
+        logOP(FAILD,msg.i,msg.dur,msg.pl);
     }
-
-    //if(msg.dur == -1 && msg.pl == -1)
-        //logOP(CLOSD,msg.i,msg.dur,msg.pl);
-    //else
-        //logOP(IAMIN,msg.i,msg.dur,msg.pl);
+    else{
+        if(msg.dur == -1 && msg.pl == -1)
+            logOP(CLOSD,msg.i,msg.dur,msg.pl);
+        else
+            logOP(IAMIN,msg.i,msg.dur,msg.pl);
+    }
 
     close(fdread);
 
@@ -156,7 +158,7 @@ int main(int argc, char * argv[]){
         usleep(1000 * r); // Waiting a random number of milliseconds ranging between 1 ms and 250 ms
     }
 
-     printf("Time is over... Threads will be joined.\n");
+    //printf("Time is over... Threads will be joined.\n");
 
     // Here comes the thread's joinings
     for (int i = 0; i < threadNum; i++) {

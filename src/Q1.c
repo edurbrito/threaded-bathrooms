@@ -205,7 +205,7 @@ int main(int argc, char * argv[]){
     // Create FIFO to receive client's requests
     if(mkfifo(fifoName,0660) < 0){
         if (errno == EEXIST){
-            printf("FIFO '%s' already exists.\n",fifoName);
+            fprintf(stderr,"FIFO '%s' already exists.\n",fifoName);
         }
         else {
             fprintf(stderr, "Could not create FIFO '%s'.\n",fifoName); 
@@ -339,7 +339,7 @@ int main(int argc, char * argv[]){
         pthread_mutex_unlock(&threads_lock);
     }
 
-    printf("Finished waiting for clients. \n");
+    //printf("Finished waiting for clients. \n");
     server_open = 1; // Server unlinked -> no more requests should be read
 
     // Wait for the thread that is handling the requests sent when the server was closing
