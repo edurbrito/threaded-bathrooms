@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/mman.h>
 #include <sys/types.h> 
+#include <signal.h>
 #include "utils.h"
 #include "types.h" 
 
@@ -249,3 +250,15 @@ Shared_memory * attach_shared_memory(char* shm_name, int shm_size){
 
     return (Shared_memory *) shm;
 } 
+
+void ignoreSIGPIPE(){
+    struct sigaction action;
+    action.sa_handler = SIG_IGN;;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    if (sigaction(SIGPIPE, &action, NULL) < 0){
+        fprintf(stderr,"Unable to install SIG handler\n");
+        exit(ERROR);
+    }
+}

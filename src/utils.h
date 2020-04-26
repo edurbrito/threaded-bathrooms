@@ -76,4 +76,6 @@ void destroy_shared_memory(Shared_memory *shm, int shm_size);
 
 Shared_memory * attach_shared_memory(char* shm_name, int shm_size);
 
+void ignoreSIGPIPE();
+
 #endif

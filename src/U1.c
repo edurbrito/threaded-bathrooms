@@ -20,7 +20,6 @@ int fdserver = 0; // Server FIFO
 // To inform the Client process that the Server will not send any more responses to requests
 Shared_memory *shmem; 
 
-
 void * client_request(void * arg){
 
     int id = * (int *) arg;
@@ -40,6 +39,11 @@ void * client_request(void * arg){
         }
     }
 
+    if((fdread = open(fifoClient,O_RDONLY|O_NONBLOCK)) == -1){
+        fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoClient);
+        return NULL;
+    } 
+
     buildMsg(&msg, id, fifoClient);
 
     // Sends message to server
@@ -49,16 +53,10 @@ void * client_request(void * arg){
         return NULL;
     }
 
-    logOP(IWANT,msg.i,msg.dur,msg.pl);       
+    logOP(IWANT,msg.i,msg.dur,msg.pl);      
     
-    if((fdread = open(fifoClient,O_RDONLY|O_NONBLOCK)) == -1){
-        fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoClient);
-        logOP(FAILD,msg.i,msg.dur,msg.pl);
-        return NULL;
-    }
-
     // Try to read answer from server while the server is still sending answers
-    int r=0;
+    int r = 0;
     
     // Try to read at least one time. Stop trying if the server as sent all answers already
     do{
@@ -122,11 +120,13 @@ int main(int argc, char * argv[]){
         exit(ERROR);
     }
 
+    ignoreSIGPIPE();
+
     // Attach shared memory created by the server
     if ((shmem = attach_shared_memory(SHM_NAME, sizeof(int))) == NULL){
         perror("CLIENT: could not attach shared memory");
         exit(ERROR);
-    } 
+    }
 
     int threadNum = 0;
     pthread_t threads[MAX_THREADS], timechecker; // timechecker will check the time left
@@ -189,6 +189,6 @@ int main(int argc, char * argv[]){
         perror("Failure in munmap()");
         exit(ERROR);
     } 
-       
+
     exit(OK);
 }

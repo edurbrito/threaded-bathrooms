@@ -346,13 +346,13 @@ int main(int argc, char * argv[]){
 
     shmem->requests_pending = 1; // All possible answers were sent to requests -> no more answers will be sent
 
+    close(server_fd);
+
     // Close the server and stop receiving requests
     if(unlink(fifoName) < 0){
         fprintf(stderr, "Error when destroying '%s'.\n",fifoName);
         exit(ERROR);
     }
-    
-    close(server_fd);
 
     destroy_shared_memory(shmem, sizeof(int)); 
 
