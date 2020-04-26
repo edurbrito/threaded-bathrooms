@@ -57,7 +57,9 @@ void * client_request(void * arg){
 
     // Try to read answer from server while the server is still sending answers
     int r;
-    while(shmem->requests_pending == 0){
+    
+    // Try to read at least one time. Stop trying if the server as sent all answers already
+    do{
         r = read(fdread, &msg, sizeof(message));
 
         // No message to read yet or error
@@ -70,12 +72,24 @@ void * client_request(void * arg){
                 continue;
         }
         else break;
-    }
+    } while(shmem->requests_pending == 0);
 
     // No more answers are being sent by the server and this request did not receive an answer
     if(r <= 0){
-        fprintf(stderr, "Couldn't read from %d", fdread);
-        logOP(FAILD,msg.i,msg.dur,msg.pl);
+        // Try one more time
+        r = read(fdread, &msg, sizeof(message));
+
+        // No message to read yet or error
+        if(r <= 0){
+            fprintf(stderr, "Couldn't read from %d", fdread);
+            logOP(FAILD,msg.i,msg.dur,msg.pl);
+        }
+        else{
+            if(msg.dur == -1 && msg.pl == -1)
+                logOP(CLOSD,msg.i,msg.dur,msg.pl);
+            else
+                logOP(IAMIN,msg.i,msg.dur,msg.pl);
+        }
     }
     else{
         if(msg.dur == -1 && msg.pl == -1)
