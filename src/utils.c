@@ -175,12 +175,6 @@ void printMsg(message * msg){
 
 }
 
-void setNonBlockingFifo(int fd){
-    int flags = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-    errno = 0; 
-}
-
 int isNotNonBlockingError(){
     if(errno != EAGAIN && errno != EWOULDBLOCK){
         perror("Error in read\n");
@@ -217,7 +211,7 @@ Shared_memory * create_shared_memory(char* shm_name, int shm_size){
     }
 
     //initialize data in shared memory
-    shm->server_open = 0;
+    shm->requests_pending = 0;
 
     return (Shared_memory *) shm;
 } 
@@ -254,18 +248,4 @@ Shared_memory * attach_shared_memory(char* shm_name, int shm_size){
     }
 
     return (Shared_memory *) shm;
-} 
-
-void init_sync_objects_in_shared_memory(Shared_memory *shm){
-
-    pthread_mutexattr_t mattr;
-    pthread_mutexattr_init(&mattr);
-    pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
-    pthread_mutex_init(&shm->request_lock, &mattr);
-
-    pthread_condattr_t cattr;
-    pthread_condattr_init(&cattr);
-    pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
-    pthread_cond_init(&shm->request_cond, &cattr);
-
 } 

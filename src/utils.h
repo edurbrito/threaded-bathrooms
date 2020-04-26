@@ -64,12 +64,6 @@ void buildMsg(message * msg, int id, char * fifoClient);
 void printMsg(message * msg);
 
 /** 
- * @brief Set FIFO as NonBlocking
- * @param fd the descriptor to be set to Non Blocking
- */
-void setNonBlockingFifo(int fd);
-
-/** 
  * @brief Check if the error was caused by the fact that the FIFO is Non Blocking FIFO
  * @return OK if the error is caused by the Non Blocking FIFO
  */
@@ -81,7 +75,5 @@ Shared_memory * create_shared_memory(char* shm_name, int shm_size);
 void destroy_shared_memory(Shared_memory *shm, int shm_size);
 
 Shared_memory * attach_shared_memory(char* shm_name, int shm_size);
-
-void init_sync_objects_in_shared_memory(Shared_memory *shm);
 
 #endif

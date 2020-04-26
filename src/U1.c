@@ -48,26 +48,34 @@ void * client_request(void * arg){
     }
     //logOP(IWANT,msg.i,msg.dur,msg.pl);       
     
-    if((fdread = open(fifoClient,O_RDONLY)) == -1){
+    if((fdread = open(fifoClient,O_RDONLY|O_NONBLOCK)) == -1){
         fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoClient);
         //logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
 
-    pthread_mutex_lock(&shmem->request_lock);
-    if(shmem->server_open == 1){
-        printf("HERE\n");
-        pthread_mutex_unlock(&shmem->request_lock);
-        return NULL;
+    // Try to read answer from server while the server is still sending answers
+    int r;
+    while(shmem->requests_pending == 0){
+        r = read(fdread, &msg, sizeof(message));
+
+        // No message to read yet or error
+        if(r <= 0){
+            // Error that does not concern the NON BLOCKING MODE -> EXIT
+            if(r < 0 && isNotNonBlockingError() == OK)
+                break;
+             // Nothing to read
+            else
+                continue;
+        }
+        else break;
     }
-        
-    // Receives message from server
-    if (read(fdread, &msg, sizeof(message)) < 0) {
+
+    // No more answers are being sent by the server and this request did not receive an answer
+    if(r <= 0){
         fprintf(stderr, "Couldn't read from %d", fdread);
         //logOP(FAILD,msg.i,msg.dur,msg.pl);
-        return NULL;
     }
-    pthread_mutex_unlock(&shmem->request_lock);
 
     //if(msg.dur == -1 && msg.pl == -1)
         //logOP(CLOSD,msg.i,msg.dur,msg.pl);
@@ -81,7 +89,7 @@ void * client_request(void * arg){
         return NULL;
     }
 
-     printMsg(&msg);
+    //printMsg(&msg);
 
     return NULL;
 }

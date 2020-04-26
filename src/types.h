@@ -33,9 +33,7 @@ typedef struct data {
 } data;
 
 typedef struct Shared_memory{
-    int server_open;
-    pthread_mutex_t request_lock;
-    pthread_cond_t request_cond;
+    int requests_pending;
 } Shared_memory;
 
 #endif
