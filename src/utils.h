@@ -75,4 +75,13 @@ void setNonBlockingFifo(int fd);
  */
 int isNotNonBlockingError();
 
+
+Shared_memory * create_shared_memory(char* shm_name, int shm_size);
+
+void destroy_shared_memory(Shared_memory *shm, int shm_size);
+
+Shared_memory * attach_shared_memory(char* shm_name, int shm_size);
+
+void init_sync_objects_in_shared_memory(Shared_memory *shm);
+
 #endif

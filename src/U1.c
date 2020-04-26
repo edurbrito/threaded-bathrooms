@@ -7,10 +7,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pthread.h> 
+#include <fcntl.h> // For O_* constants
+#include <semaphore.h>
+#include <sys/mman.h>
+#include <sys/mman.h>
+#include <sys/types.h> 
 #include "utils.h"
 #include "types.h"
 
 int fdserver = 0; // server file descriptor
+Shared_memory *shmem;
+
 
 void * client_request(void * arg){
 
@@ -39,20 +46,29 @@ void * client_request(void * arg){
         //logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
-    //logOP(IWANT,msg.i,msg.dur,msg.pl);
-
+    //logOP(IWANT,msg.i,msg.dur,msg.pl);       
+    
     if((fdread = open(fifoClient,O_RDONLY)) == -1){
         fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoClient);
         //logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
 
+    pthread_mutex_lock(&shmem->request_lock);
+    if(shmem->server_open == 1){
+        printf("HERE\n");
+        pthread_mutex_unlock(&shmem->request_lock);
+        return NULL;
+    }
+        
     // Receives message from server
     if (read(fdread, &msg, sizeof(message)) < 0) {
         fprintf(stderr, "Couldn't read from %d", fdread);
         //logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
+    pthread_mutex_unlock(&shmem->request_lock);
+
     //if(msg.dur == -1 && msg.pl == -1)
         //logOP(CLOSD,msg.i,msg.dur,msg.pl);
     //else
@@ -78,6 +94,11 @@ int main(int argc, char * argv[]){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
     }
+
+    if ((shmem = attach_shared_memory(SHM_NAME, sizeof(int))) == NULL){
+        perror("CLIENT: could not attach shared memory");
+        exit(ERROR);
+    } 
 
     int threadNum = 0;
     pthread_t threads[MAX_THREADS], timechecker; // timechecker will check the time left
@@ -135,6 +156,11 @@ int main(int argc, char * argv[]){
     }
     
     close(fdserver);
+
+    if (munmap(shmem,sizeof(int)) < 0){
+        perror("Failure in munmap()");
+        exit(ERROR);
+    } 
        
     exit(OK);
 }

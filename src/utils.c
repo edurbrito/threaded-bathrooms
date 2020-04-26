@@ -7,6 +7,11 @@
 #include <time.h>
 #include <getopt.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <semaphore.h>
+#include <sys/mman.h>
+#include <sys/mman.h>
+#include <sys/types.h> 
 #include "utils.h"
 #include "types.h" 
 
@@ -183,3 +188,84 @@ int isNotNonBlockingError(){
     }
     return ERROR;
 }
+
+Shared_memory * create_shared_memory(char* shm_name, int shm_size){
+
+    int shmfd;
+    Shared_memory *shm;
+
+    //create the shared memory region
+    shmfd = shm_open(SHM_NAME,O_CREAT|O_RDWR,0660);
+
+    if(shmfd < 0){
+        perror("Failure in shm_open()");
+        return NULL;
+    }
+
+    //specify the size of the shared memory region
+    if (ftruncate(shmfd,shm_size) < 0){
+        perror("Failure in ftruncate()");
+        return NULL;
+    } 
+
+    //attach this region to virtual memory
+    shm = mmap(0,shm_size,PROT_READ|PROT_WRITE,MAP_SHARED,shmfd,0);
+
+    if(shm == MAP_FAILED){
+        perror("Failure in mmap()");
+        return NULL;
+    }
+
+    //initialize data in shared memory
+    shm->server_open = 0;
+
+    return (Shared_memory *) shm;
+} 
+
+void destroy_shared_memory(Shared_memory *shm, int shm_size){
+    if (munmap(shm,shm_size) < 0){
+        perror("Failure in munmap()");
+        exit(EXIT_FAILURE);
+    }
+
+    if (shm_unlink(SHM_NAME) < 0){
+        perror("Failure in shm_unlink()");
+        exit(EXIT_FAILURE);
+    }
+} 
+
+Shared_memory * attach_shared_memory(char* shm_name, int shm_size){
+    int shmfd;
+    Shared_memory *shm;
+
+    shmfd = shm_open(SHM_NAME,O_RDWR,0660);
+
+    if(shmfd < 0){
+        perror("Failure in shm_open()");
+        return NULL;
+    }
+
+    //attach this region to virtual memory
+    shm = mmap(0,shm_size,PROT_READ|PROT_WRITE,MAP_SHARED,shmfd,0);
+
+    if(shm == MAP_FAILED){
+        perror("Failure in mmap()"); 
+        return NULL;
+    }
+
+    return (Shared_memory *) shm;
+} 
+
+void init_sync_objects_in_shared_memory(Shared_memory *shm){
+
+    pthread_mutexattr_t mattr;
+    pthread_mutexattr_init(&mattr);
+    pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+    pthread_mutex_init(&shm->request_lock, &mattr);
+
+    pthread_condattr_t cattr;
+    pthread_condattr_init(&cattr);
+    pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_SHARED);
+    pthread_cond_init(&shm->request_cond, &cattr);
+
+} 

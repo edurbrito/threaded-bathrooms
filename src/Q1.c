@@ -12,7 +12,7 @@
 
 int server_fd;
 
-int fifo_open = 0;
+Shared_memory *shmem; 
 
 pthread_t threads[MAX_THREADS];
 pthread_t closingThreads[MAX_THREADS]; 
@@ -115,8 +115,7 @@ void * server_closing(void * arg){
     
     int noPlaceId = 0;
 
-    while(fifo_open == 0){
-        
+    while(shmem->server_open == 0){
         pthread_mutex_lock(&threads_lock);
             while(threadsAvailable == 0){
                 pthread_cond_wait(&threads_cond, &threads_lock);
@@ -187,6 +186,12 @@ int main(int argc, char * argv[]){
     sprintf(fifoName,"/tmp/%s",a.fifoName);
 
     pthread_t timechecker;
+
+    if ((shmem = create_shared_memory(SHM_NAME, sizeof(int))) == NULL){
+        perror("SERVER: could not attach shared memory");
+        exit(ERROR);
+    }
+    init_sync_objects_in_shared_memory(shmem); 
 
     // Create FIFO to receive client's requests
     if(mkfifo(fifoName,0660) < 0){
@@ -314,7 +319,9 @@ int main(int argc, char * argv[]){
     }
 
     printf("Finished waiting for clients. \n");
-    fifo_open = 1; // Stop receiving messages
+    pthread_mutex_lock(&shmem->request_lock);
+    shmem->server_open = 1; // Stop receiving messages
+    pthread_mutex_unlock(&shmem->request_lock);
 
     // Wait for the thread that is handling the requests sent when the server was closing
     pthread_join(blockedServerThread,NULL);
@@ -326,6 +333,8 @@ int main(int argc, char * argv[]){
     }
     
     close(server_fd);
+
+    destroy_shared_memory(shmem, sizeof(int)); 
 
     pthread_exit(OK);
 }
