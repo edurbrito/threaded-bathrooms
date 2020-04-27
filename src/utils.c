@@ -262,3 +262,17 @@ void ignoreSIGPIPE(){
         exit(ERROR);
     }
 }
+
+int getThreadPosition(int * threadsArray){
+    for(int i = 0; i < MAX_THREADS; i++){
+        if(threadsArray[i] == 0){
+            threadsArray[i] = 1;
+            return i;
+        }
+    }
+    return -1;
+}
+
+void freeThreadPosition(int * threadsArray, int pos){
+    threadsArray[pos] = 0;
+}

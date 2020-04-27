@@ -78,4 +78,8 @@ Shared_memory * attach_shared_memory(char* shm_name, int shm_size);
 
 void ignoreSIGPIPE();
 
+int getThreadPosition(int * threadsArray);
+
+void freeThreadPosition(int * threadsArray, int pos);
+
 #endif

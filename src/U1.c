@@ -17,12 +17,22 @@
 
 int fdserver = 0; // Server FIFO
 
+int threadsAvailable = MAX_THREADS; // Available threads in the Client
+
+int threadsPositions[MAX_THREADS] = {0}; // Keeps track of available positions in threads array 
+
+// Used to wait for available threads without busy waiting
+pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t threads_cond = PTHREAD_COND_INITIALIZER;
+
 // To inform the Client process that the Server will not send any more responses to requests
 Shared_memory *shmem; 
 
 void * client_request(void * arg){
 
-    int id = * (int *) arg;
+    client_data data = *(client_data *) arg;
+    free(arg);
+
     message msg;
     int fdread;
 
@@ -44,7 +54,7 @@ void * client_request(void * arg){
         return NULL;
     } 
 
-    buildMsg(&msg, id, fifoClient);
+    buildMsg(&msg, data.myId, fifoClient);
 
     // Sends message to server
     if((write(fdserver, &msg, sizeof(message))) == -1){
@@ -94,6 +104,13 @@ void * client_request(void * arg){
     }
 
     //printMsg(&msg);
+    
+    freeThreadPosition(threadsPositions, data.myThreadPos);
+
+    pthread_mutex_lock(&threads_lock);
+    threadsAvailable++;
+    pthread_cond_signal(&threads_cond);
+    pthread_mutex_unlock(&threads_lock);
 
     return NULL;
 }
@@ -116,9 +133,8 @@ int main(int argc, char * argv[]){
         exit(ERROR);
     }
 
-    int threadNum = 0;
-    pthread_t threads[MAX_THREADS], timechecker; // timechecker will check the time left
-    int ids[MAX_THREADS]; 
+    int id = 0;
+    pthread_t threads[MAX_THREADS] = {0}, timechecker; // timechecker will check the time left
 
     srand((unsigned) time(NULL)); // init a random generator
 
@@ -146,24 +162,33 @@ int main(int argc, char * argv[]){
     // Here comes the creation of all the other threads;
     while(!terminated[1]){
 
-        if(threadNum == MAX_THREADS){
-            fprintf(stderr,"MAX THREADS exceeded...\n");
-            break;
+        // Wait for available threads
+        pthread_mutex_lock(&threads_lock);
+        while(threadsAvailable == 0){
+            pthread_cond_wait(&threads_cond, &threads_lock);
         }
+        pthread_mutex_unlock(&threads_lock);
 
-        ids[threadNum] = threadNum;
+        client_data * data = (client_data*)malloc(sizeof(client_data));
+        data->myId = id;
+        id++;
+        data->myThreadPos = getThreadPosition(threadsPositions);
+
+        // Take one of the available threads to handle the request
+        pthread_mutex_lock(&threads_lock);
+        threadsAvailable--;
+        pthread_mutex_unlock(&threads_lock);
 
         if (lstat(filepath, &stat_buf) == -1 || !S_ISFIFO(stat_buf.st_mode)){
+            free(data);
             fprintf(stderr,"The file is not a FIFO...\n");        
             break;
         }
 
-        if(pthread_create(&threads[threadNum], NULL, client_request, (void *) &ids[threadNum])){
+        if(pthread_create(&threads[data->myThreadPos], NULL, client_request, (void *)data)){
             fprintf(stderr,"Error creating thread.\n");
             break;
         }
-
-        threadNum++;
 
         int r = 1 + rand() % 250;
         usleep(1000 * r); // Waiting a random number of milliseconds ranging between 1 ms and 250 ms
@@ -172,7 +197,7 @@ int main(int argc, char * argv[]){
     //printf("Time is over... Threads will be joined.\n");
 
     // Here comes the thread's joinings
-    for (int i = 0; i < threadNum; i++) {
+    for (int i = 0; i < MAX_THREADS; i++) {
         pthread_join(threads[i], NULL);
     }
     

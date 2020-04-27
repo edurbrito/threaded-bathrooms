@@ -4,8 +4,7 @@
 #define OK 0
 #define ERROR 1
 #define FIFONAME_SIZE 200
-#define MAX_THREADS 300
-#define MAX_THREADS_TESTING 30
+#define MAX_THREADS 30
 #define SHM_NAME "/shm1"
 
 typedef enum{ U, Q } caller;
@@ -32,6 +31,11 @@ typedef struct data {
     int myThreadPos;
     message msg;
 } data;
+
+typedef struct client_data {
+    int myThreadPos;
+    int myId;
+} client_data;
 
 typedef struct Shared_memory{
     int requests_pending;

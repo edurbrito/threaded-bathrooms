@@ -18,18 +18,14 @@ Shared_memory *shmem;
 // To inform the thread that takes the requests when the server is closing that no more request should be read
 int server_open = 0;
 
-int threadsAvailable = MAX_THREADS_TESTING; // Available threads in the Server
+int threadsAvailable = MAX_THREADS; // Available threads in the Server
 
-int thread_pos = 0; // The next position of the accepted threads array to be filled
-int closing_pos = 0; // The next position of the refused threads array to be filled
+int threadsPositions[MAX_THREADS] = {0}; // Keeps track of available positions in threads array 
+int closingThreadsPositions[MAX_THREADS] = {0}; //  Keeps track of available positions in closing threads array 
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t threads_cond = PTHREAD_COND_INITIALIZER;
-
-// Used to allow mutual exclusion when changing the next available position in the arrays of threads
-pthread_mutex_t pos_lock = PTHREAD_MUTEX_INITIALIZER; 
-pthread_mutex_t closing_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void * handle_request(void *arg){
 
@@ -62,9 +58,7 @@ void * handle_request(void *arg){
     unsigned int remainingTime = threadData.msg.dur;
     usleep(remainingTime); // Just consuming the time
 
-    pthread_mutex_lock(&pos_lock);
-    thread_pos = threadData.myThreadPos;
-    pthread_mutex_unlock(&pos_lock);
+    freeThreadPosition(threadsPositions, threadData.myThreadPos);
 
     pthread_mutex_lock(&threads_lock);
     threadsAvailable++;
@@ -104,9 +98,7 @@ void * refuse_request(void *arg){
 
     close(fd);
 
-    pthread_mutex_lock(&closing_lock);
-    closing_pos = threadData.myThreadPos;
-    pthread_mutex_unlock(&closing_lock);
+    freeThreadPosition(closingThreadsPositions,threadData.myThreadPos);
 
     pthread_mutex_lock(&threads_lock);
     threadsAvailable++;
@@ -118,7 +110,7 @@ void * refuse_request(void *arg){
 
 void * server_closing(void * arg){
 
-    pthread_t closingThreads[MAX_THREADS_TESTING] =  {0};
+    pthread_t closingThreads[MAX_THREADS] =  {0};
     int noPlaceId = 0;
 
     // While the server is closing read requests
@@ -159,15 +151,12 @@ void * server_closing(void * arg){
         threadsAvailable--;
         pthread_mutex_unlock(&threads_lock);
         
-        pthread_mutex_lock(&closing_lock);
+        
         // Each thread must know its position in the array of threads to be able to free that position for other threads when it finishes
-        threadData->myThreadPos = closing_pos;
-        // Update the next available position in the array of closing threads
-        closing_pos++;
-        pthread_mutex_unlock(&closing_lock);     
+        threadData->myThreadPos = getThreadPosition(closingThreadsPositions); 
 
         // Creates new thread in respective position
-        if(pthread_create(&closingThreads[threadData->myThreadPos], NULL, refuse_request, threadData) != OK){
+        if(pthread_create(&closingThreads[threadData->myThreadPos], NULL, refuse_request, (void *)threadData) != OK){
             free(threadData);
             fprintf(stderr,"Error creating thread.\n");
             break;
@@ -175,7 +164,7 @@ void * server_closing(void * arg){
     }
 
     // Wait for the threads that will inform clients that made requests when server was closing
-    for(int i = 0; i < noPlaceId && i < MAX_THREADS_TESTING; i++){
+    for(int i = 0; i < noPlaceId && i < MAX_THREADS; i++){
         pthread_join(closingThreads[i],NULL);
     }
 
@@ -223,7 +212,7 @@ int main(int argc, char * argv[]){
 
     int terminated[] = {a.nsecs, 0}; // Second element will be 1 if time is over, creating no more threads on main thread
     
-    pthread_t threads[MAX_THREADS_TESTING] = {0}, timechecker;
+    pthread_t threads[MAX_THREADS] = {0}, timechecker;
 
     // Creating the synchronous thread that just checks if the time ended
     // Notifying the main thread with the @p terminated variable
@@ -284,15 +273,11 @@ int main(int argc, char * argv[]){
         threadsAvailable--;
         pthread_mutex_unlock(&threads_lock);
         
-        pthread_mutex_lock(&pos_lock);
         // Each thread must know its position in the array of threads to be able to free that position for other threads when it finishes
-        threadData->myThreadPos = thread_pos;
-        // Update the next available position in the array of threads
-        thread_pos++;
-        pthread_mutex_unlock(&pos_lock);     
+        threadData->myThreadPos = getThreadPosition(threadsPositions); 
 
         // Creates new thread in respective position
-        if(pthread_create(&threads[threadData->myThreadPos], NULL, handle_request, threadData) != OK){
+        if(pthread_create(&threads[threadData->myThreadPos], NULL, handle_request, (void *)threadData) != OK){
             free(threadData);
             fprintf(stderr,"Error creating thread.\n");
             break;
@@ -328,7 +313,7 @@ int main(int argc, char * argv[]){
     }
 
     // Wait for all threads to finish except the ones thrown when server was already closing
-    for(int i = 0; i < placeId && i < MAX_THREADS_TESTING; i++){
+    for(int i = 0; i < MAX_THREADS; i++){
         pthread_join(threads[i],NULL);
     }
 
