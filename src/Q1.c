@@ -10,8 +10,7 @@
 #include "utils.h"
 #include "types.h"
 
-// Server FIFO
-int server_fd;
+int server_fd; // Server FIFO
 
 // To inform the Client process that the Server will not send any more responses to requests
 Shared_memory *shmem; 
@@ -123,7 +122,7 @@ void * server_closing(void * arg){
     int noPlaceId = 0;
 
     // While the server is closing read requests
-    while(server_open == 0){
+    while(server_open == OK){
         pthread_mutex_lock(&threads_lock);
             while(threadsAvailable == 0){
                 pthread_cond_wait(&threads_cond, &threads_lock);
@@ -333,7 +332,7 @@ int main(int argc, char * argv[]){
         pthread_join(threads[i],NULL);
     }
 
-    server_open = 1; // Server unlinked -> no more requests should be read
+    server_open = ERROR; // Server unlinked -> no more requests should be read
 
     // Wait for the thread that is handling the requests sent when the server was closing
     pthread_join(blockedServerThread,NULL);

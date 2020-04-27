@@ -72,7 +72,7 @@ void * client_request(void * arg){
                 continue;
         }
         else break;
-    } while(shmem->requests_pending == 0);
+    } while(shmem->requests_pending == OK);
 
     // No more answers are being sent by the server and this request did not receive an answer
     if(r <= 0){
@@ -155,7 +155,7 @@ int main(int argc, char * argv[]){
 
         if (lstat(filepath, &stat_buf) == -1 || !S_ISFIFO(stat_buf.st_mode)){
             fprintf(stderr,"The file is not a FIFO...\n");        
-            exit(ERROR);
+            break;
         }
 
         if(pthread_create(&threads[threadNum], NULL, client_request, (void *) &ids[threadNum])){
