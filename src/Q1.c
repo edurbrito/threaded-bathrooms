@@ -331,12 +331,6 @@ int main(int argc, char * argv[]){
     // Wait for all threads to finish except the ones thrown when server was already closing
     for(int i = 0; i < placeId && i < MAX_THREADS_TESTING; i++){
         pthread_join(threads[i],NULL);
-        
-        // Update number of available threads (add one available thread)
-        pthread_mutex_lock(&threads_lock);
-        threadsAvailable++;
-        pthread_cond_signal(&threads_cond);
-        pthread_mutex_unlock(&threads_lock);
     }
 
     server_open = 1; // Server unlinked -> no more requests should be read
