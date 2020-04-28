@@ -65,6 +65,8 @@ void * handle_request(void *arg){
     pthread_cond_signal(&threads_cond);
     pthread_mutex_unlock(&threads_lock);
 
+    logOP(TIMUP,threadData.msg.i, threadData.msg.dur, threadData.msg.pl);
+
     return NULL;
 }
 
@@ -284,8 +286,6 @@ int main(int argc, char * argv[]){
         } 
         
     }
-
-    logOP(TIMUP,placeId-1, 0, placeId);
     
     //printf("Time is over... Threads will be joined.\n");
 
