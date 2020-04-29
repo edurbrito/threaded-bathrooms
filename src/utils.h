@@ -69,17 +69,10 @@ void printMsg(message * msg);
  */
 int isNotNonBlockingError();
 
-
-Shared_memory * create_shared_memory(char* shm_name, int shm_size);
-
-void destroy_shared_memory(Shared_memory *shm, int shm_size);
-
-Shared_memory * attach_shared_memory(char* shm_name, int shm_size);
-
+/**
+ * @brief Ignores SIGPIPE in relation to the shared FIFO between the
+ * Client and the Server process
+*/
 void ignoreSIGPIPE();
-
-int getThreadPosition(int * threadsArray);
-
-void freeThreadPosition(int * threadsArray, int pos);
 
 #endif

@@ -7,32 +7,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pthread.h> 
-#include <fcntl.h> // For O_* constants
-#include <semaphore.h>
-#include <sys/mman.h>
-#include <sys/mman.h>
-#include <sys/types.h> 
 #include "utils.h"
 #include "types.h"
 
-int fdserver = 0; // Server FIFO
-
-int threadsAvailable = MAX_THREADS; // Available threads in the Client
-
-int threadsPositions[MAX_THREADS] = {0}; // Keeps track of available positions in threads array 
+int fdserver = 0; // server file descriptor
+int threadsAvailable = 40; // threads running at the same time / simultaneously -> mostly used in the 2nd part
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t threads_cond = PTHREAD_COND_INITIALIZER;
 
-// To inform the Client process that the Server will not send any more responses to requests
-Shared_memory *shmem; 
-
 void * client_request(void * arg){
 
-    client_data data = *(client_data *) arg;
-    free(arg);
-
+    int id = * (int *) arg;
     message msg;
     int fdread;
 
@@ -42,19 +29,14 @@ void * client_request(void * arg){
     // Creates FIFO for the client to read info from server
     if(mkfifo(fifoClient, 0660) < 0){
         if (errno == EEXIST)
-            fprintf(stderr,"FIFO '%s' already exists.\n", fifoClient);
+            printf("FIFO '%s' already exists.\n", fifoClient);
         else {
             fprintf(stderr,"Can't create FIFO '%s'.\n", fifoClient); 
             return NULL;
         }
     }
 
-    if((fdread = open(fifoClient,O_RDONLY|O_NONBLOCK)) == -1){
-        fprintf(stderr,"Error opening %s in READONLY mode.\n",fifoClient);
-        return NULL;
-    } 
-
-    buildMsg(&msg, data.myId, fifoClient);
+    buildMsg(&msg, id, fifoClient);
 
     // Sends message to server
     if((write(fdserver, &msg, sizeof(message))) == -1){
@@ -62,35 +44,21 @@ void * client_request(void * arg){
         logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
+    logOP(IWANT,msg.i,msg.dur,msg.pl);
 
-    logOP(IWANT,msg.i,msg.dur,msg.pl);      
-    
-    // Try to read answer from server while the server is still sending answers
-    int r = 0;
-    
-    // Try to read at least one time. Stop trying if the server as sent all answers already
-    do{
-        r = read(fdread, &msg, sizeof(message));
+    if((fdread = open(fifoClient,O_RDONLY)) == -1){
+        fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoClient);
+        logOP(FAILD,msg.i,msg.dur,msg.pl);
+        return NULL;
+    }
 
-        // No message to read yet or error
-        if(r <= 0){
-            // Error that does not concern the NON BLOCKING MODE -> EXIT
-            if(r < 0 && isNotNonBlockingError() == OK)
-                break;
-             // Nothing to read
-            else
-                continue;
-        }
-        else break;
-    } while(shmem->requests_pending == OK);
-
-    // No more answers are being sent by the server and this request did not receive an answer
-    if(r <= 0){
+    // Receives message from server
+    if (read(fdread, &msg, sizeof(message)) < 0) {
         fprintf(stderr, "Couldn't read from %d", fdread);
         logOP(FAILD,msg.i,msg.dur,msg.pl);
         return NULL;
     }
-   
+
     if(msg.dur == -1 && msg.pl == -1)
         logOP(CLOSD,msg.i,msg.dur,msg.pl);
     else
@@ -103,9 +71,7 @@ void * client_request(void * arg){
         return NULL;
     }
 
-    //printMsg(&msg);
-    
-    freeThreadPosition(threadsPositions, data.myThreadPos);
+    // printMsg(&msg);
 
     pthread_mutex_lock(&threads_lock);
     threadsAvailable++;
@@ -119,7 +85,6 @@ int main(int argc, char * argv[]){
 
     args a;
 
-    // Check the arguments
     if (checkArgs(argc, argv, &a, U) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
@@ -127,14 +92,9 @@ int main(int argc, char * argv[]){
 
     ignoreSIGPIPE();
 
-    // Attach shared memory created by the server
-    if ((shmem = attach_shared_memory(SHM_NAME, sizeof(int))) == NULL){
-        perror("CLIENT: could not attach shared memory");
-        exit(ERROR);
-    }
-
-    int id = 0;
-    pthread_t threads[MAX_THREADS] = {0}, timechecker; // timechecker will check the time left
+    int threadNum = 0;
+    pthread_t threads[MAX_THREADS], timechecker; // timechecker will check the time left
+    int ids[MAX_THREADS]; 
 
     srand((unsigned) time(NULL)); // init a random generator
 
@@ -162,51 +122,42 @@ int main(int argc, char * argv[]){
     // Here comes the creation of all the other threads;
     while(!terminated[1]){
 
-        // Wait for available threads
-        pthread_mutex_lock(&threads_lock);
-        while(threadsAvailable == 0){
-            pthread_cond_wait(&threads_cond, &threads_lock);
-        }
-        pthread_mutex_unlock(&threads_lock);
-
-        client_data * data = (client_data*)malloc(sizeof(client_data));
-        data->myId = id;
-        id++;
-        data->myThreadPos = getThreadPosition(threadsPositions);
-
-        // Take one of the available threads to handle the request
-        pthread_mutex_lock(&threads_lock);
-        threadsAvailable--;
-        pthread_mutex_unlock(&threads_lock);
-
         if (lstat(filepath, &stat_buf) == -1 || !S_ISFIFO(stat_buf.st_mode)){
-            free(data);
             fprintf(stderr,"The file is not a FIFO...\n");        
             break;
         }
 
-        if(pthread_create(&threads[data->myThreadPos], NULL, client_request, (void *)data)){
+        pthread_mutex_lock(&threads_lock);
+
+            while(threadsAvailable <= 0){
+                pthread_cond_wait(&threads_cond, &threads_lock);
+            }
+
+            threadsAvailable--;
+            
+        pthread_mutex_unlock(&threads_lock);
+
+        ids[threadNum] = threadNum;
+
+        if(pthread_create(&threads[threadNum], NULL, client_request, (void *) &ids[threadNum])){
             fprintf(stderr,"Error creating thread.\n");
             break;
         }
 
-        int r = 1 + rand() % 250;
+        threadNum++;
+
+        int r = 1 + rand() % 25;
         usleep(1000 * r); // Waiting a random number of milliseconds ranging between 1 ms and 250 ms
     }
 
-    //printf("Time is over... Threads will be joined.\n");
+    // printf("Time is over... Threads will be joined.\n");
 
     // Here comes the thread's joinings
-    for (int i = 0; i < MAX_THREADS; i++) {
+    for (int i = 0; i < threadNum; i++) {
         pthread_join(threads[i], NULL);
     }
     
     close(fdserver);
-
-    if (munmap(shmem,sizeof(int)) < 0){
-        perror("Failure in munmap()");
-        exit(ERROR);
-    } 
-
+       
     exit(OK);
 }

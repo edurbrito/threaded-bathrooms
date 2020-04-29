@@ -7,8 +7,8 @@ begin:
 
 generate:
 		@echo "Creating ouput files..."
-		gcc U1.c utils.c -o U1 -Wall -lpthread -D_REENTRANT -lrt
-		gcc Q1.c utils.c -o Q1 -Wall -lpthread -D_REENTRANT -lrt
+		gcc U1.c utils.c -o U1 -Wall -lpthread -D_REENTRANT
+		gcc Q1.c utils.c -o Q1 -Wall -lpthread -D_REENTRANT
 
 runU: begin generate
 		@echo "## Starting running U ##"
