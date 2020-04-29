@@ -17,6 +17,13 @@ int threadsAvailable = 1000; // threads running at the same time / simultaneousl
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t threads_cond = PTHREAD_COND_INITIALIZER;
 
+void incrementThreadsAvailable(){
+    pthread_mutex_lock(&threads_lock);
+    threadsAvailable++;
+    pthread_cond_signal(&threads_cond);
+    pthread_mutex_unlock(&threads_lock);
+}
+
 void * client_request(void * arg){
 
     int id = * (int *) arg;
@@ -32,6 +39,7 @@ void * client_request(void * arg){
             printf("FIFO '%s' already exists.\n", fifoClient);
         else {
             fprintf(stderr,"Can't create FIFO '%s'.\n", fifoClient); 
+            incrementThreadsAvailable();
             return NULL;
         }
     }
@@ -42,6 +50,7 @@ void * client_request(void * arg){
     if((write(fdserver, &msg, sizeof(message))) == -1){
         fprintf(stderr,"Error sending message to Server.\n");
         logOP(FAILD,msg.i,msg.dur,msg.pl);
+        incrementThreadsAvailable();
         return NULL;
     }
     logOP(IWANT,msg.i,msg.dur,msg.pl);
@@ -49,6 +58,7 @@ void * client_request(void * arg){
     if((fdread = open(fifoClient,O_RDONLY)) == -1){
         fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoClient);
         logOP(FAILD,msg.i,msg.dur,msg.pl);
+        incrementThreadsAvailable();
         return NULL;
     }
 
@@ -56,6 +66,7 @@ void * client_request(void * arg){
     if (read(fdread, &msg, sizeof(message)) < 0) {
         fprintf(stderr, "Couldn't read from %d", fdread);
         logOP(FAILD,msg.i,msg.dur,msg.pl);
+        incrementThreadsAvailable();
         return NULL;
     }
 
@@ -66,17 +77,14 @@ void * client_request(void * arg){
 
     close(fdread);
 
+    incrementThreadsAvailable();
+
     if(unlink(fifoClient) < 0){
         fprintf(stderr, "Error when destroying '%s'.'\n",fifoClient);
         return NULL;
     }
 
     // printMsg(&msg);
-
-    pthread_mutex_lock(&threads_lock);
-    threadsAvailable++;
-    pthread_cond_signal(&threads_cond);
-    pthread_mutex_unlock(&threads_lock);
 
     return NULL;
 }

@@ -13,11 +13,16 @@
 int server_fd; // server file descriptor
 int threadsAvailable = 1000; // threads running at the same time / simultaneously -> will be used in the 2nd part
 
-int threadsAvailable = MAX_THREADS;
-
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t threads_cond = PTHREAD_COND_INITIALIZER;
+
+void incrementThreadsAvailable(){
+    pthread_mutex_lock(&threads_lock);
+    threadsAvailable++;
+    pthread_cond_signal(&threads_cond);
+    pthread_mutex_unlock(&threads_lock);
+}
 
 void * handle_request(void *arg){
 
@@ -29,6 +34,7 @@ void * handle_request(void *arg){
     if((fd = open(fifoName,O_WRONLY)) == -1){ // Opening Client FIFO
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
+        incrementThreadsAvailable();
         return NULL;
     }
 
@@ -38,6 +44,7 @@ void * handle_request(void *arg){
     if(write(fd, msg, sizeof(message)) == -1){ // Writing to Client FIFO
         fprintf(stderr,"Error writing response to Client.\n");
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
+        incrementThreadsAvailable();
         return NULL;
     }
     logOP(ENTER,msg->i,msg->dur,msg->pl);
@@ -49,10 +56,7 @@ void * handle_request(void *arg){
 
     logOP(TIMUP,msg->i, msg->dur, msg->pl);
 
-    pthread_mutex_lock(&threads_lock);
-    threadsAvailable++;
-    pthread_cond_signal(&threads_cond);
-    pthread_mutex_unlock(&threads_lock);
+    incrementThreadsAvailable();
 
     free(arg);
 
@@ -71,6 +75,7 @@ void * refuse_request(void *arg){
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
         free(arg);
         logOP(GAVUP,msg.i,msg.dur,msg.pl);
+        incrementThreadsAvailable();
         return NULL;
     }
 
@@ -83,6 +88,7 @@ void * refuse_request(void *arg){
         fprintf(stderr,"Error writing response to Client.\n");
         free(arg);
         logOP(GAVUP,msg.i,msg.dur,msg.pl);
+        incrementThreadsAvailable();
         return NULL;
     }
 
@@ -92,10 +98,7 @@ void * refuse_request(void *arg){
 
     free(arg);
 
-    pthread_mutex_lock(&threads_lock);
-    threadsAvailable++;
-    pthread_cond_signal(&threads_cond);
-    pthread_mutex_unlock(&threads_lock);
+    incrementThreadsAvailable();
 
     return NULL;
 }
