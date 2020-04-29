@@ -10,7 +10,8 @@
 #include "utils.h"
 #include "types.h"
 
-int server_fd;
+int server_fd; // server file descriptor
+int threadsAvailable = 1000; // threads running at the same time / simultaneously -> will be used in the 2nd part
 
 int threadsAvailable = MAX_THREADS;
 
