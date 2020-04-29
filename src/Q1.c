@@ -157,7 +157,7 @@ int main(int argc, char * argv[]){
     args a;
 
     if (checkArgs(argc, argv, &a, Q) != OK ){
-        fprintf(stderr,"Usage: %s <-t nsecs> [-l nplaces] [-n nthreads] fifoname\n",argv[0]);
+        fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
     }
        
