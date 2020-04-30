@@ -27,3 +27,4 @@ logQ: begin generate
 clean:
 		@echo "Cleaning up..."
 		-rm U1 Q1 -f
+		-rm *.log *.err -f

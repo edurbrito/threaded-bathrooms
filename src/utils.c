@@ -14,27 +14,24 @@
 void printArgs(args * a){
     printf("###### ARGS ######\n");
     printf("nsecs = %d\n", a->nsecs);
-    /*printf("nplaces = %d\n", a->nplaces);
-    printf("nthreads = %d\n", a->nthreads);*/
     printf("fifoName = %s\n", a->fifoName);
     printf("###### ARGS ######\n\n");
 }
 
-int checkArgs(int argc, char * argv[], args * a, caller C){
+int checkArgs(int argc, char * argv[], args * a){
    
     int c;
     int option_index = 0;
 
     args tempargs;
-
-    /*int nplaces = 0, nthreads = 0;*/
+    tempargs.nsecs = -1;
 
     while(1) {         
 
         // The short_options array, as a string, is interpreted 
         // as a no_argument option for every alone character and 
         // a required_argument option for every character followed by a colon (:)
-        c = getopt_long(argc, argv, "t:l:n:", NULL, &option_index);
+        c = getopt_long(argc, argv, "t:", NULL, &option_index);
         // c contains the current arg from argv that is being analyzed
 
         if (c == -1)
@@ -54,18 +51,6 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
                     return ERROR;
                 break;
 
-            /*case 'l':
-                if( (tempargs.nplaces = atoi(optarg)) <= 0 || C != Q )
-                    return ERROR;
-                nplaces = 1;
-                break;
-
-            case 'n':
-                if( (tempargs.nthreads = atoi(optarg)) <= 0 || C != Q )
-                    return ERROR;
-                nthreads = 1;
-                break;
-            */
             case '?': // Unkown option in argv
                 /* getopt_long already printed an error message. */
                 // printf("Exiting...\n");
@@ -94,24 +79,15 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
     if( strlen(tempargs.fifoName) == 0 ) 
         return ERROR;
 
+    if( tempargs.nsecs <= 0)
+        return ERROR;
+
     a->nsecs = tempargs.nsecs;
-    /*if ( C == Q ){
-        if ( nplaces && nthreads ){
-            a->nplaces = tempargs.nplaces;
-            a->nthreads = tempargs.nthreads;
-        }
-        else
-            return ERROR;
-    }
-    else{
-        a->nplaces = -1;
-        a->nthreads = -1;
-    }*/
+  
     strcpy(a->fifoName, tempargs.fifoName);
    
     return OK;
 }
-
 
 int logOP(action a, int i , int dur, int pl){
     
@@ -136,8 +112,10 @@ int logOP(action a, int i , int dur, int pl){
 }
 
 void * timeChecker(void * arg){
-    
-    int * terminated = (int *) arg;
+
+    // 1st element is the number of seconds to wait
+    // 2nd element is to be set when terminated, for ending the while loop of the main thread
+    int * terminated = (int *) arg; 
 
     int nsecs = terminated[0];
     sleep(nsecs);
@@ -180,7 +158,7 @@ int isNotNonBlockingError(){
     return ERROR;
 }
 
-void ignoreSIGPIPE(){
+int ignoreSIGPIPE(){
     struct sigaction action;
     action.sa_handler = SIG_IGN;;
     sigemptyset(&action.sa_mask);
@@ -188,6 +166,8 @@ void ignoreSIGPIPE(){
 
     if (sigaction(SIGPIPE, &action, NULL) < 0){
         fprintf(stderr,"Unable to install SIG handler\n");
-        exit(ERROR);
+        return ERROR;
     }
+
+    return OK;
 }

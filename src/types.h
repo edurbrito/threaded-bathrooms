@@ -6,8 +6,6 @@
 #define FIFONAME_SIZE 200
 #define MAX_THREADS 100000
 
-typedef enum{ U, Q } caller;
-
 typedef enum{ IWANT, RECVD, ENTER, IAMIN, TIMUP, TLATE, CLOSD, FAILD, GAVUP } action;
 
 typedef struct args {

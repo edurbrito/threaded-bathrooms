@@ -21,13 +21,12 @@ void printArgs(args * a);
  * @param argc number of args passed
  * @param argv args passed
  * @param a struct to be filled with args
- * @param C caller program
  * @return OK if successful, ERROR otherwise
  * @note Lots of Credits to those who managed to give a very good explanation at 
  * @see https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html
  * @see https://linux.die.net/man/3/getopt_long for more info on the functions used
  */
-int checkArgs(int argc, char * argv[], args * a, caller C);
+int checkArgs(int argc, char * argv[], args * a);
 
 /**
  * @brief Appends some log info to the stdout
@@ -42,7 +41,7 @@ int logOP(action a, int i , int dur, int pl);
 /**
  * @brief Thread function to measure remaining time for the program
  * that invoked it to terminate.
- * @arg the argument passed as a void pointer, corresponding to a 
+ * @param arg The argument passed as a void pointer, corresponding to a 
  * 2 elements' array, where the first is the number of seconds to
  * wait and the second element is the terminating variable, set to
  * one if the program is to be ended
@@ -60,6 +59,7 @@ void buildMsg(message * msg, int id, char * fifoClient);
 /** 
  * @brief Print message sent from client to server or from server to cliente (for testing purposes)
  * @param msg the message to print
+ * @note For Debugging Purposes
  */
 void printMsg(message * msg);
 
@@ -70,9 +70,10 @@ void printMsg(message * msg);
 int isNotNonBlockingError();
 
 /**
- * @brief Ignores SIGPIPE in relation to the shared FIFO between the
- * Client and the Server process
+ * @brief Ignores SIGPIPE in relation to the shared FIFO 
+ * between the Client and the Server process
+ * @return OK if successfull, ERROR otherwise
 */
-void ignoreSIGPIPE();
+int ignoreSIGPIPE();
 
 #endif

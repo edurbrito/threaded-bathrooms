@@ -11,7 +11,7 @@
 #include "types.h"
 
 int server_fd; // server file descriptor
-int threadsAvailable = 1000; // threads running at the same time / simultaneously -> will be used in the 2nd part
+int threadsAvailable = 1000; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -35,6 +35,7 @@ void * handle_request(void *arg){
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
         incrementThreadsAvailable();
+        free(arg);
         return NULL;
     }
 
@@ -45,6 +46,7 @@ void * handle_request(void *arg){
         fprintf(stderr,"Error writing response to Client.\n");
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
         incrementThreadsAvailable();
+        free(arg);
         return NULL;
     }
     logOP(ENTER,msg->i,msg->dur,msg->pl);
@@ -73,9 +75,9 @@ void * refuse_request(void *arg){
     int fd;
     if((fd = open(fifoName,O_WRONLY)) == -1){
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
-        free(arg);
         logOP(GAVUP,msg.i,msg.dur,msg.pl);
         incrementThreadsAvailable();
+        free(arg);
         return NULL;
     }
 
@@ -86,9 +88,9 @@ void * refuse_request(void *arg){
 
     if(write(fd, &msg, sizeof(message)) == -1){
         fprintf(stderr,"Error writing response to Client.\n");
-        free(arg);
         logOP(GAVUP,msg.i,msg.dur,msg.pl);
         incrementThreadsAvailable();
+        free(arg);
         return NULL;
     }
 
@@ -105,9 +107,9 @@ void * refuse_request(void *arg){
 
 void * server_closing(void * arg){
 
-    pthread_t threads[MAX_THREADS]; 
+    pthread_t * threads = (pthread_t *) malloc(MAX_THREADS * sizeof(pthread_t));
 
-    int threadNum = 0; // Restart Counting
+    int threadNum = 0; // Start counting again
 
     while(1){
 
@@ -142,16 +144,23 @@ void * server_closing(void * arg){
             
         pthread_mutex_unlock(&threads_lock);
 
-        // printMsg(msg);
-
         pthread_create(&threads[threadNum], NULL, refuse_request, msg);
+
         threadNum++;
+
+        if (threadNum % MAX_THREADS == 0){ // If reached the MAX limit of total threads
+            // realloc more memory for threads
+            int i = threadNum / MAX_THREADS + 1;
+            threads = realloc(threads, i * MAX_THREADS * sizeof(pthread_t));
+        } 
     }
 
     // Wait for the threads that will inform clients that made requests when server was closing
     for(int i = 0; i < threadNum; i++){
         pthread_join(threads[i],NULL);
     }
+
+    free(threads);
 
     return NULL;
 }
@@ -160,7 +169,7 @@ int main(int argc, char * argv[]){
 
     args a;
 
-    if (checkArgs(argc, argv, &a, Q) != OK ){
+    if (checkArgs(argc, argv, &a) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
     }
@@ -169,7 +178,8 @@ int main(int argc, char * argv[]){
     sprintf(fifoName,"/tmp/%s",a.fifoName);
 
     int placeNum = 0, threadNum = 0;
-    pthread_t threads[MAX_THREADS], timechecker;
+    pthread_t timechecker; // timechecker will check the time left
+    pthread_t * threads = (pthread_t *) malloc(MAX_THREADS * sizeof(pthread_t));
 
     // Create FIFO to receive client's requests
     if(mkfifo(fifoName,0660) < 0){
@@ -178,6 +188,7 @@ int main(int argc, char * argv[]){
         }
         else {
             fprintf(stderr, "Could not create FIFO '%s'.\n",fifoName); 
+            free(threads);
             exit(ERROR);
         }
     }
@@ -185,6 +196,7 @@ int main(int argc, char * argv[]){
     // Open FIFO in READ ONLY mode to read client's requests
     if((server_fd = open(fifoName,O_RDONLY|O_NONBLOCK)) == -1){
         fprintf(stderr,"Error opening '%s' in READONLY mode.\n",fifoName);
+        free(threads);
         if(unlink(fifoName) < 0){
             fprintf(stderr, "Error when destroying '%s'.\n",fifoName);
             exit(ERROR);
@@ -197,8 +209,17 @@ int main(int argc, char * argv[]){
     
     // Creating the synchronous thread that just checks if the time ended
     // Notifying the main thread with the @p terminated variable
-    pthread_create(&timechecker, NULL, timeChecker, (void *) terminated);
-    pthread_detach(timechecker);
+    if(pthread_create(&timechecker, NULL, timeChecker, (void *) terminated) != OK){
+        fprintf(stderr,"Error creating timeChecker thread.\n");
+        free(threads);
+        exit(ERROR);
+    }
+    
+    if(pthread_detach(timechecker) != OK){
+        fprintf(stderr,"Error detaching timeChecker thread.\n");
+        free(threads);
+        exit(ERROR);
+    }
 
     // Receive client's requests during defined time interval
     while(!terminated[1]){
@@ -228,7 +249,7 @@ int main(int argc, char * argv[]){
 
         pthread_mutex_lock(&threads_lock);
 
-            while(threadsAvailable <= 1){
+            while(threadsAvailable <= 0){
                 pthread_cond_wait(&threads_cond, &threads_lock);
             }
 
@@ -240,8 +261,6 @@ int main(int argc, char * argv[]){
         msg->pl = placeNum;
         placeNum++;
 
-        // printMsg(msg);
-        
         // Create thread to handle the request of the client
         if(pthread_create(&threads[threadNum], NULL, handle_request, msg) != OK){
             free(msg);
@@ -249,13 +268,18 @@ int main(int argc, char * argv[]){
             break;
         }
 
-        threadNum++;        
+        threadNum++;      
+
+        if (threadNum % MAX_THREADS == 0){ // If reached the MAX limit of total threads
+            // realloc more memory for threads
+            int i = threadNum / MAX_THREADS + 1;
+            threads = realloc(threads, i * MAX_THREADS * sizeof(pthread_t));
+        } 
     }
     
-    // printf("Time is over... Threads will be joined.\n");
-
     // Create thread to handle requests while server is closing
-    pthread_create(&threads[threadNum], NULL, server_closing, NULL);
+    pthread_t sclosing_thread;
+    pthread_create(&sclosing_thread, NULL, server_closing, NULL);
 
     // Wait for all threads to finish except the ones thrown when server was already closing
     for(int i = 0; i < threadNum; i++){
@@ -263,17 +287,17 @@ int main(int argc, char * argv[]){
     }
     
     // Wait for the thread that is handling the requests sent when the server was closing
-    pthread_join(threads[threadNum],NULL);
+    pthread_join(sclosing_thread,NULL);
+    
+    free(threads);
 
     // Close the server and stop receiving requests
+    close(server_fd);
+
     if(unlink(fifoName) < 0){
         fprintf(stderr, "Error when destroying '%s'.\n",fifoName);
         exit(ERROR);
     }
-
-    // printf("FIFO '%s' destroyed.\n",fifoName);
-    
-    close(server_fd);
-
-    pthread_exit(OK);
+        
+    exit(OK);
 }
