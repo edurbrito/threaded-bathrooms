@@ -14,6 +14,23 @@ Com este projeto, demonstramos conhecer e saber utilizar a interface programáti
 
 ### Relatório
 
+## Estrutura das mensagens trocadas
+
+Relativamente à estrutura das mensagens trocadas entre e o cliente e o servidor, utilizamos uma struct 'message' para estruturar a mensagem de pedido do cliente e a resposta do servidor. 
+
+O cliente irá guardar nessa struct o seu PID e TID, necessário para criar o canal privado onde recebe a resposta do servidor, a duração de tempo requesitado, e o seu número sequêncial. Por fim, envia ao servidor um pedido através do canal público recebido como parâmetro. 
+
+Já no servidor, ao receber o pedido do cliente por esse canal público, deve alterar a struct, atualizando com o seu o PID e TID. No caso de o servidor já não estar em funcionamente, altera o pl e dur para -1, para indicar o encerramento do serviço. Assim envia a sua resposta ao cliente, pelo canal privado criado.
+
+typedef struct message {
+    int i;
+    pid_t pid;
+    pthread_t tid;
+    int dur;
+    int pl;
+    char fifoName[FIFONAME_SIZE];
+} message;
+
 
 ### Autores
 
