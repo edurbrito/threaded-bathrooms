@@ -47,6 +47,7 @@ void * handle_request(void *arg){
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
         incrementThreadsAvailable();
         free(arg);
+        close(fd);
         return NULL;
     }
     logOP(ENTER,msg->i,msg->dur,msg->pl);
@@ -91,6 +92,7 @@ void * refuse_request(void *arg){
         logOP(GAVUP,msg.i,msg.dur,msg.pl);
         incrementThreadsAvailable();
         free(arg);
+        close(fd);
         return NULL;
     }
 
