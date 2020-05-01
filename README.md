@@ -19,7 +19,7 @@ Com este projeto, demonstramos conhecer e saber utilizar a interface programáti
 
 ## Estrutura das mensagens trocadas
 
-Relativamente à estrutura das mensagens trocadas entre e o cliente e o servidor, optamos por utilizar a `struct message` de modo a //TODO.
+Relativamente à estrutura das mensagens trocadas entre e o cliente e o servidor, optamos por utilizar a `struct message` onde o cliente guarda os dados do seu pedido e o servidor a respetiva resposta. 
 
 O cliente irá guardar nessa `struct` o seu *PID* e *TID*, necessário para criar o canal privado onde recebe a resposta do servidor, a duração de tempo requisitado, e o seu número sequêncial. Por fim, envia ao servidor um pedido através do canal público recebido como parâmetro. 
 
