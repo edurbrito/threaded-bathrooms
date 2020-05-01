@@ -107,11 +107,13 @@ void * refuse_request(void *arg){
 
 void * server_closing(void * arg){
 
+    int *server_opened = (int * )arg;
+
     pthread_t * threads = (pthread_t *) malloc(MAX_THREADS * sizeof(pthread_t));
 
     int threadNum = 0; // Start counting again
 
-    while(1){
+    while(server_opened){
 
         message * msg = (message *) malloc(sizeof(message));
         
@@ -279,7 +281,8 @@ int main(int argc, char * argv[]){
     
     // Create thread to handle requests while server is closing
     pthread_t sclosing_thread;
-    pthread_create(&sclosing_thread, NULL, server_closing, NULL);
+    int server_opened = 1;
+    pthread_create(&sclosing_thread, NULL, server_closing, &server_opened);
 
     // Wait for all threads to finish except the ones thrown when server was already closing
     for(int i = 0; i < threadNum; i++){
@@ -290,9 +293,12 @@ int main(int argc, char * argv[]){
         fprintf(stderr, "Error when destroying '%s'.\n",fifoName);
         exit(ERROR);
     }
+
+    server_opened = 0; // To inform the thread that is closing requests that no more answers should be sent
     
     // Wait for the thread that is handling the requests sent when the server was closing
     pthread_join(sclosing_thread,NULL);
+
     
     free(threads);
 
