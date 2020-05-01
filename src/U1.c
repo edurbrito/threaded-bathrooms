@@ -11,7 +11,7 @@
 #include "types.h"
 
 int fdserver = 0; // server file descriptor
-int threadsAvailable = 1000; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
+int threadsAvailable = 50; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;

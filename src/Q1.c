@@ -11,7 +11,7 @@
 #include "types.h"
 
 int server_fd; // server file descriptor
-int threadsAvailable = 1000; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
+int threadsAvailable = 50; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -285,6 +285,11 @@ int main(int argc, char * argv[]){
     for(int i = 0; i < threadNum; i++){
         pthread_join(threads[i],NULL);
     }
+
+    if(unlink(fifoName) < 0){
+        fprintf(stderr, "Error when destroying '%s'.\n",fifoName);
+        exit(ERROR);
+    }
     
     // Wait for the thread that is handling the requests sent when the server was closing
     pthread_join(sclosing_thread,NULL);
@@ -293,11 +298,6 @@ int main(int argc, char * argv[]){
 
     // Close the server and stop receiving requests
     close(server_fd);
-
-    if(unlink(fifoName) < 0){
-        fprintf(stderr, "Error when destroying '%s'.\n",fifoName);
-        exit(ERROR);
-    }
         
     exit(OK);
 }

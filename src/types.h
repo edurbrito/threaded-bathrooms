@@ -4,7 +4,7 @@
 #define OK 0
 #define ERROR 1
 #define FIFONAME_SIZE 200
-#define MAX_THREADS 100000
+#define MAX_THREADS 50000
 
 typedef enum{ IWANT, RECVD, ENTER, IAMIN, TIMUP, TLATE, CLOSD, FAILD, GAVUP } action;
 
