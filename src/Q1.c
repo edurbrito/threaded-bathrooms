@@ -175,6 +175,11 @@ int main(int argc, char * argv[]){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
     }
+
+    if (ignoreSIGPIPE() != OK){
+        fprintf(stderr,"Error ignoring SIGPIPE\n");
+        exit(ERROR);
+    }
        
     char fifoName[FIFONAME_SIZE + 50];
     sprintf(fifoName,"/tmp/%s",a.fifoName);

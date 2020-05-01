@@ -17,13 +17,24 @@ Com este projeto, demonstramos conhecer e saber utilizar a interface programáti
 
 ### Relatório
 
-## Estrutura das mensagens trocadas
+#### Como correr o programa
+
+Em conjunto com os *source files*, existe um *Makefile* com os comandos usados para compilar todos os ficheiros. O nosso procedimento para correr e testar o programa era:
+1. Abrir dois terminais em simultâneo, na pasta `src` deste diretório, contendo todos os ficheiros e o *Makefile*.
+2. Executar o comando `make` num deles.
+3. Correr os dois programas em simultâneo:
+   1. Num dos terminais, correr `./Q1 -t <nsecs> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `q1.log` e `q1.err`.
+   2. No outro terminal, correr `./U1 -t <nsecs> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `u1.log` e `u1.err`.
+4. Esperar pelo seu término, de acordo com o tempo de execução estipulado para cada
+5. Opcionalmente, se feito o redirecionamento do output para ficheiros de log, correr-se-ia o script `./testing.sh`, ou simplesmente o comando `make test`, para verificar eventuais testes sugeridos no enunciado.
+
+#### Estrutura das mensagens trocadas
 
 Relativamente à estrutura das mensagens trocadas entre e o cliente e o servidor, optamos por utilizar a `struct message` onde o cliente guarda os dados do seu pedido e o servidor a respetiva resposta. 
 
-O cliente irá guardar nessa `struct` o seu *PID* e *TID*, necessário para criar o canal privado onde recebe a resposta do servidor, a duração de tempo requisitado, e o seu número sequêncial. Por fim, envia ao servidor um pedido através do canal público recebido como parâmetro. 
+O cliente irá guardar, nessa `struct`, o seu *PID* e *TID*, necessários para criar o canal privado onde recebe a resposta do servidor, a duração de tempo requisitado, e o seu número sequêncial. Por fim, envia ao servidor um pedido através do canal público recebido como parâmetro. 
 
-Já no servidor, ao receber o pedido do cliente por esse canal público, deve alterar a struct, atualizando com o seu o PID e TID. No caso de o servidor já não estar em funcionamento, altera o pl e dur para -1, para indicar o encerramento do serviço. Assim envia a sua resposta ao cliente, pelo canal privado criado.
+Já no servidor, ao receber o pedido do cliente por esse canal público, deve alterar a `struct`, atualizando com o seu o PID e TID. No caso de o servidor já não estar em funcionamento, altera o pl e dur para -1, para indicar o encerramento do serviço. Assim envia a sua resposta ao cliente, pelo canal privado criado.
 
 ```c
 typedef struct message {
@@ -36,26 +47,25 @@ typedef struct message {
 } message;
 ```
 
-## Intercomunicação entre processos através de canais com nome
+#### Intercomunicação entre processos através de canais com nome
 
 >A utilização de FIFOs e de funções que permitem proceder à sua leitura e escrita permitiu proceder à troca de mensagens entre os processos do Cliente e do Servidor (Quarto de Banho).
 
-### *Criação, Abertura e Leitura dos pedidos no Servidor* 
+#### *Criação, Abertura e Leitura dos pedidos no Servidor* 
 
 No Servidor, depois de lidos os argumentos e após a criação do FIFO com o nome neles indicado ter sido executada com sucesso, procede-se à abertura do FIFO em modo de escrita, através da função `mkfifo(..)`. 
 
-Seguidamente, na abertura do FIFO em modo de leitura, `O_RDONLY`, optou-se por ativar a flag `O_NONBLOCK`, pois, para podermos controlar o tempo de execução do servidor, independentemente de este ter ou não solicitações nesse período, é preciso evitar que abertura do ficheiro com a função `open(...)` bloqueie pelo facto de não existir ainda nenhum processo com o FIFO aberto para escrita. Assim, o Servidor não fica durante tempo indeterminado à espera de Clientes - `open(...)` é bem sucedida e retorna imediatamente
-mesmo que o FIFO ainda não tenha sido aberto para escrita por nenhum processo, que será o caso.
+Seguidamente, na abertura do FIFO em modo de leitura, `O_RDONLY`, optou-se por ativar a flag `O_NONBLOCK`, pois, para podermos controlar o tempo de execução do servidor, independentemente de este ter ou não solicitações nesse período, é preciso evitar que a abertura do ficheiro com a função `open(...)` bloqueie pelo facto de não existir ainda nenhum processo com o FIFO aberto para escrita. Assim, o Servidor não fica durante tempo indeterminado à espera de Clientes - `open(...)` é bem sucedida e retorna imediatamente mesmo que o FIFO ainda não tenha sido aberto para escrita por nenhum processo, que será o caso.
 
 Já no ciclo que recebe pedidos, vai ser feita a cada iteração uma tentativa de leitura do FIFO, utilizando a função `read(...)` para proceder à tentativa de leitura do número de bytes ocupados pela struct `message` e verificando o seu valor de retorno:
 - No caso de, entretanto, os Clientes começarem a fazer os seus pedidos, isto é, o FIFO já ter sido aberto para escrita pelo processo *U1*, `read(...)` poderá:
-    - retornar um valor inteiro maior do que zero, quando efetivamente foram lidos dados do FIFO - sendo devolvidos o número de bytes lidos; , caso no qual se procede à criação de uma thread para processar o pedido; 
+    - retornar um valor inteiro maior do que zero, quando efetivamente foram lidos dados do FIFO - sendo devolvidos o número de bytes lidos, caso no qual se procede à criação de uma thread para processar o pedido; 
     - retornar `EAGAIN` pelo facto de o FIFO ter sido aberto em modo `O_NONBLOCK` e não existir nada no FIFO para ler naquele instante, caso no qual se avança para a próxima leitura, libertando o espaço anteriormente alocado para a mensagem do Cliente. 
 - No caso de ainda não ter sido feito nenhum pedido, isto é, de o FIFO não se encontrar ainda aberto para escrita, a leitura vai retornar `EOF` pelo que o espaço previamente alocado para receber a mensagem do Cliente é libertado, passando-se para a próxima iteração do ciclo de receção de pedidos.
 
 Um procedimento semelhante para leitura dos pedidos do FIFO público é adotado na função de início de thread responsável por gerar as threads que recusam os pedidos quando o servidor está a encerrar, `void * server_closing(void * arg)`.
 
-### *Abertura e escrita de pedidos no processo Cliente*
+#### *Abertura e escrita de pedidos no processo Cliente*
 
 No Cliente, é feita a abertura para escrita, `O_WRONLY`, do FIFO passado nos argumentos. Seguidamente, no ciclo de geração de pedidos são criadas threads, ficando cada thread encarregue da geração de um pedido. É de notar que cada thread terá acesso ao descritor do FIFO criado na thread inicial, tal como é sugerido pela seguinte afirmação: ["threads share the same global memory (data and heap segments)"](http://man7.org/linux/man-pages/man7/pthreads.7.html).
 Na função de início da thread `void * client_request(int * arg)`, é criado o FIFO com a identificação do cliente (*PID* e *TID*), usando `mkfifo(..)` mais uma vez.
@@ -64,13 +74,69 @@ Já no caso em que o Servidor não tem o FIFO aberto para escrita, que acontece 
 No caso de o envio do pedido ser bem sucedido, é aberto o FIFO criado pelo cliente em modo de leitura e é lida a resposta ao pedido realizado, sendo que a função `read(...)` bloqueia até que seja escrita a resposta ou até que o FIFO seja fechado para escrita.
 Após interpretar a resposta do Servidor, o Cliente fecha(`close(...)`) e destrói (`unlink(...)`) o seu FIFO privado.
 
-### *Receção dos pedidos nas threads do Servidor*
+#### *Receção dos pedidos nas threads do Servidor*
 
-Finalmente, tanto na função de início de thread que tem a responsabilidade de aceitar pedidos - `void * handle_request(void *arg)`; como na que é responsável por os recusar - `void * refuse_request(void *arg)`; procede-se à abertura do FIFO privado do Cliente com a função `open(...)` e, após processado o pedido recebido, escreve-se a respetiva resposta utilizando a função `write(...)`.  // TODO (a terminar)
+Finalmente, tanto na função de início de thread que tem a responsabilidade de aceitar pedidos - `void * handle_request(void *arg)`; como na que é responsável por os recusar - `void * refuse_request(void *arg)`; procede-se à abertura do FIFO privado do Cliente com a função `open(...)` no modo de escrita, ativando, mais uma vez, a flag `O_NONBLOCK` de modo a evitar que a thread bloqueie infinitamente no caso de, após processado o pedido recebido, escreve-se a respetiva resposta utilizando a função `write(...)`.  // TODO (a terminar)
 
-## Tratemneto do sinal SIGPIPE
+#### Tratamento do sinal SIGPIPE
 
 >blablabla já estou cansada de escrever (a terminar)
+
+#### Espera do tempo especificado nos argumentos
+
+Como mecanismo auxiliar de espera do tempo de funcionamento de cada programa, implementámos uma thread que corre paralelamente e cuja única função é esperar os `nsecs` especificados. O seu código é o seguinte:
+```c
+
+void * timeChecker(void * arg){
+
+    // 1st element is the number of seconds to wait
+    // 2nd element is to be set when terminated, for ending the while loop of the main thread
+    int * terminated = (int *) arg; 
+
+    int nsecs = terminated[0];
+    sleep(nsecs);
+
+    terminated[1] = 1;
+    
+    return NULL;
+}
+
+``` 
+Passados os `nsecs`, a variável `terminated` é modificada e a função main recebe a indicação que terminou o seu tempo, saindo do loop de criação de threads.
+
+#### Mecanismos de sincronização usados
+
+Nesta primeira parte do projeto, optámos por nos focar no funcionamento geral do especificado no enunciado. Os mecanismos de sincronização usados, para esta parte, resumem-se à necessidade de impedir um número elevado de threads a executar em simultâneo, sobretudo para não sobrecarregar o sistema, e, ao mesmo tempo, preparando já o suposto do campo `nthreads` da parte seguinte do projeto:
+
+```c
+// Used to wait for available threads without busy waiting
+pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t threads_cond = PTHREAD_COND_INITIALIZER;
+
+// ... Quando uma thread termina
+
+void incrementThreadsAvailable(){
+    pthread_mutex_lock(&threads_lock);
+    threadsAvailable++;
+    pthread_cond_signal(&threads_cond);
+    pthread_mutex_unlock(&threads_lock);
+}
+
+// ... Na função main, antes de criar uma nova thread
+
+pthread_mutex_lock(&threads_lock);
+
+    while(threadsAvailable <= 0){
+        pthread_cond_wait(&threads_cond, &threads_lock);
+    }
+
+    threadsAvailable--;
+    
+pthread_mutex_unlock(&threads_lock);
+
+```
+
+
 
 ### Autores
 

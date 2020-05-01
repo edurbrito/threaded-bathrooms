@@ -1,4 +1,3 @@
-#!/bin/bash
 RECVD=`grep RECVD q1.log | wc -l` ; echo "RECVD: $RECVD";
 IWANT=`grep IWANT u1.log | wc -l` ; echo "IWANT: $IWANT";
 echo "----------------";
