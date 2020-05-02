@@ -115,26 +115,24 @@ void * server_closing(void * arg){
 
     int threadNum = 0; // Start counting again
 
-    while(server_opened){
+    while(*server_opened){
 
         message * msg = (message *) malloc(sizeof(message));
         
         int r;
         if((r = read(server_fd,msg, sizeof(message))) < 0){
             if(isNotNonBlockingError() == OK){
-                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 break;
             }
             else{
-                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 continue;
             }
         }
         else if(r == 0){
             free(msg);
-            break;
+            continue;
         }
         logOP(RECVD,msg->i,msg->dur,msg->pl);
 
@@ -239,12 +237,10 @@ int main(int argc, char * argv[]){
         // Read message from client if it exists (without blocking)
         if((r = read(server_fd, msg, sizeof(message))) < 0){
             if(isNotNonBlockingError() == OK){
-                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 break;
             }
             else{
-                // logOP(GAVUP,msg->i,msg->dur,msg->pl);
                 free(msg);
                 continue;
             }
