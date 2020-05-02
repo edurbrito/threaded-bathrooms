@@ -55,7 +55,7 @@ void * handle_request(void *arg){
     close(fd);
 
     unsigned int remainingTime = msg->dur;
-    usleep(remainingTime); // Just consuming the time
+    usleep(1000 * remainingTime); // Just consuming the time
 
     logOP(TIMUP,msg->i, msg->dur, msg->pl);
 
