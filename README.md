@@ -266,7 +266,20 @@ void * server_closing(void * arg){
 
     return NULL;
 ```
+### Output esperado
+Em todas as ocasiões, tanto no server como no client, as linhas de output seguem o formato:
 
+![](images/closing_server.png)
+
+Dependendo da ação a realizar, a última keyword é diferente, mas, na globalidade, o seu número de ocorrências está sempre relacionado, como esperado e previsto pelo enunciado (podem ser feitos os testes presentes no ficheiro [testing.sh](src/testing.sh)).
+
+As situações de falha também são detetadas:
+
+![](images/FAILD.png)
+
+E as situações de desistência de um dado cliente, ainda que bastante raras, também podem ocorrer, como detetado na seguinte ocasião:
+
+![](images/GAVUP.png)
 
 ### Autores
 
