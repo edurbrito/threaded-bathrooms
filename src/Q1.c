@@ -115,7 +115,7 @@ void * server_closing(void * arg){
 
     int threadNum = 0; // Start counting again
 
-    while(*server_opened){
+    while(1){
 
         message * msg = (message *) malloc(sizeof(message));
         
@@ -131,6 +131,10 @@ void * server_closing(void * arg){
             }
         }
         else if(r == 0){
+            // If server closed already and nothing is read then break
+            if(!*server_opened){
+                break;
+            }
             free(msg);
             continue;
         }

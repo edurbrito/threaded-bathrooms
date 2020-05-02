@@ -123,7 +123,7 @@ Já no caso em que o Servidor não tem o FIFO aberto para escrita, que acontece 
     if((write(fdserver, &msg, sizeof(message))) == -1){
         fprintf(stderr,"Error sending message to Server.\n");
         logOP(FAILD,msg.i,msg.dur,msg.pl);
-        incrementThreadsAvailable();
+        // ...
         return NULL;
     }
 ```
@@ -141,11 +141,7 @@ if(write(fd, msg, sizeof(message)) == -1){
         // Error detected. May be EPIPE 
         fprintf(stderr,"Error writing response to Client.\n");
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
-
-        incrementThreadsAvailable();
-        free(arg);
-        close(fd);
-
+        //...
         return NULL;
     }
 
@@ -211,7 +207,65 @@ pthread_mutex_unlock(&threads_lock);
 
 ### Perído de fecho do servidor - recusar pedidos
 
-//TODO
+Tal como indicado no enunciado, é necessário que o servidor notifique os clientes no tempo correspondente ao seu encerramento, isto é, quando ainda está a completar os pedidos anteriores. Para isso, optamos por utilizar uma thread que se responsabiliza por, após terminado o tempo de abertura do Servidor, enviar a resposta aos pedidos pendentes no buffer e aos que são feitos durante o tempo de encerramento. O `unlink(...)` é feito após esperar pelas threads já lançadas - `join(...)`, as quais duram o tempo requisitado pelo Cliente. Segue-se a alteração da variável `server_opened`, cujo endereço fora inicialmente enviado como argumento da função de início da thread que recusa os pedidos. Esta variável irá indicar então que o Cliente deixou de conseguir enviar novos pedidos, por deixar de conseguir localizar o FIFO no sistema de ficheiros com a função `lstat(...)`. Posto isto, perante um erro na leitura ou uma tentativa falhada de leitura, o ciclo que está a recusar pedidos termina, aguarda-se pelo envio das respostas que recusam os pedidos e termina-se o programa, fechando o descritor do FIFO.
+
+```c
+
+// ... in main function
+
+ // Create thread to handle requests while server is closing
+    pthread_t sclosing_thread;
+    int server_opened = 1;
+    pthread_create(&sclosing_thread, NULL, server_closing, &server_opened);
+
+    // Wait for all threads to finish except the ones thrown when server was already closing
+    for(int i = 0; i < threadNum; i++){
+        pthread_join(threads[i],NULL);
+    }
+
+    if(unlink(fifoName) < 0){
+        fprintf(stderr, "Error when destroying '%s'.\n",fifoName);
+        exit(ERROR);
+    }
+
+    server_opened = 0; // To inform the thread that is closing requests that no more answers should be sent
+    
+    // Wait for the thread that is handling the requests sent when the server was closing
+    pthread_join(sclosing_thread,NULL);
+
+    // ... Close the server and stop receiving requests
+    close(server_fd);
+
+```
+
+```c
+void * server_closing(void * arg){
+
+    int *server_opened = (int * )arg;
+
+    while(1){
+
+        if((r = read(server_fd,msg, sizeof(message))) < 0){
+            // ...
+        }
+        else if(r == 0){
+            // If server closed already and nothing is read then break
+            if(!*server_opened)
+                break;
+            // ...
+        }
+        // ...
+        pthread_create(&threads[threadNum], NULL, refuse_request, msg);
+        // ...
+    }
+
+    // Wait for the threads that will inform clients that made requests when server was closing
+    for(int i = 0; i < threadNum; i++){
+        pthread_join(threads[i],NULL);
+    }
+
+    return NULL;
+```
 
 
 ### Autores
