@@ -92,7 +92,7 @@ int main(int argc, char * argv[]){
 
     args a;
 
-    if (checkArgs(argc, argv, &a) != OK ){
+    if (checkArgs(argc, argv, &a, U) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
     }

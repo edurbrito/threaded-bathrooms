@@ -12,16 +12,26 @@
 
 int server_fd; // server file descriptor
 int threadsAvailable = 50; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
+int placesAvailable = 50;
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t threads_cond = PTHREAD_COND_INITIALIZER;
 
-void incrementThreadsAvailable(){
+// Used to wait for available places without busy waiting
+pthread_mutex_t places_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t places_cond = PTHREAD_COND_INITIALIZER;
+
+void incrementMutexes(){
     pthread_mutex_lock(&threads_lock);
     threadsAvailable++;
     pthread_cond_signal(&threads_cond);
     pthread_mutex_unlock(&threads_lock);
+
+    pthread_mutex_lock(&places_lock);
+    placesAvailable++;
+    pthread_cond_signal(&places_cond);
+    pthread_mutex_unlock(&places_lock);
 }
 
 void * handle_request(void *arg){
@@ -34,7 +44,7 @@ void * handle_request(void *arg){
     if((fd = open(fifoName,O_WRONLY)) == -1){ // Opening Client FIFO
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
-        incrementThreadsAvailable();
+        incrementMutexes();
         free(arg);
         return NULL;
     }
@@ -45,7 +55,7 @@ void * handle_request(void *arg){
     if(write(fd, msg, sizeof(message)) == -1){ // Writing to Client FIFO
         fprintf(stderr,"Error writing response to Client.\n");
         logOP(GAVUP,msg->i,msg->dur,msg->pl);
-        incrementThreadsAvailable();
+        incrementMutexes();
         free(arg);
         close(fd);
         return NULL;
@@ -59,7 +69,7 @@ void * handle_request(void *arg){
 
     logOP(TIMUP,msg->i, msg->dur, msg->pl);
 
-    incrementThreadsAvailable();
+    incrementMutexes();
 
     free(arg);
 
@@ -77,7 +87,7 @@ void * refuse_request(void *arg){
     if((fd = open(fifoName,O_WRONLY)) == -1){
         fprintf(stderr,"Error opening '%s' in WRITEONLY mode.\n",fifoName);
         logOP(GAVUP,msg.i,msg.dur,msg.pl);
-        incrementThreadsAvailable();
+        incrementMutexes();
         free(arg);
         return NULL;
     }
@@ -90,7 +100,7 @@ void * refuse_request(void *arg){
     if(write(fd, &msg, sizeof(message)) == -1){
         fprintf(stderr,"Error writing response to Client.\n");
         logOP(GAVUP,msg.i,msg.dur,msg.pl);
-        incrementThreadsAvailable();
+        incrementMutexes();
         free(arg);
         close(fd);
         return NULL;
@@ -102,7 +112,7 @@ void * refuse_request(void *arg){
 
     free(arg);
 
-    incrementThreadsAvailable();
+    incrementMutexes();
 
     return NULL;
 }
@@ -175,8 +185,8 @@ int main(int argc, char * argv[]){
 
     args a;
 
-    if (checkArgs(argc, argv, &a) != OK ){
-        fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
+    if (checkArgs(argc, argv, &a, Q) != OK ){
+        fprintf(stderr,"Usage: %s <-t nsecs> <-l nplaces> <-n nthreads> fifoname\n",argv[0]);
         exit(ERROR);
     }
 
@@ -188,9 +198,17 @@ int main(int argc, char * argv[]){
     char fifoName[FIFONAME_SIZE + 50];
     sprintf(fifoName,"/tmp/%s",a.fifoName);
 
-    int placeNum = 0, threadNum = 0;
+    if(a.nthreads > 0)
+        threadsAvailable = a.nthreads;
+    if(a.nplaces > 0){
+        placesAvailable = a.nplaces;
+    }
+        
+
+    int threadNum = 0;
     pthread_t timechecker; // timechecker will check the time left
     pthread_t * threads = (pthread_t *) malloc(MAX_THREADS * sizeof(pthread_t));
+    
 
     // Create FIFO to receive client's requests
     if(mkfifo(fifoName,0660) < 0){
@@ -263,12 +281,18 @@ int main(int argc, char * argv[]){
             }
 
             threadsAvailable--;
-            
         pthread_mutex_unlock(&threads_lock);
 
-        // Set client's place number
-        msg->pl = placeNum;
-        placeNum++;
+
+        pthread_mutex_lock(&places_lock);
+
+            while(placesAvailable <= 0){
+                pthread_cond_wait(&places_cond, &places_lock);
+            }
+
+            placesAvailable--;
+            msg->pl = placesAvailable;
+        pthread_mutex_unlock(&places_lock);
 
         // Create thread to handle the request of the client
         if(pthread_create(&threads[threadNum], NULL, handle_request, msg) != OK){
