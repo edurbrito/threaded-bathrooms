@@ -271,7 +271,7 @@ Em todas as ocasiões, tanto no server como no client, as linhas de output segue
 
 ![](images/closing_server.png)
 
-Dependendo da ação a realizar, a última keyword é diferente, mas, na globalidade, o seu número de ocorrências está sempre relacionado, como esperado e previsto pelo enunciado (podem ser feitos os testes presentes no ficheiro [testing.sh](src/testing.sh)).
+Dependendo da ação a realizar, a última keyword é diferente, mas, na globalidade, o seu número de ocorrências está sempre relacionado, como esperado e previsto pelo enunciado (podem ser feitos os testes presentes no ficheiro [testing.sh](testing.sh)).
 
 As situações de falha também são detetadas:
 
