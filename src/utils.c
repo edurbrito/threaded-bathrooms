@@ -194,7 +194,12 @@ int ignoreSIGPIPE(){
     return OK;
 }
 
-int getAvailablePlace(int places[], int size){
+int getAvailablePlace(int places[], int size, int requestNum){
+    int place = requestNum % size;
+
+    if(places[place] == 0)
+        return place;
+
     for(int i = 0 ;  i < size; i++){
         if(places[i] == 0){
             places[i] = 1;

@@ -77,7 +77,7 @@ int isNotNonBlockingError();
 */
 int ignoreSIGPIPE();
 
-int getAvailablePlace(int places[], int size);
+int getAvailablePlace(int places[], int size, int requestNum);
 
 void freePlace(int places[], int placeNum);
 

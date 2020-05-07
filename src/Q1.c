@@ -185,6 +185,7 @@ void * server_closing(void * arg){
 int main(int argc, char * argv[]){
 
     args a;
+    int requestCounter = 0;
 
     if (checkArgs(argc, argv, &a, Q) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> <-l nplaces> <-n nthreads> fifoname\n",argv[0]);
@@ -292,8 +293,10 @@ int main(int argc, char * argv[]){
             }
 
             placesAvailable--;
-            msg->pl = getAvailablePlace(places, a.nplaces);
+            msg->pl = getAvailablePlace(places, a.nplaces, msg->i);
         pthread_mutex_unlock(&places_lock);
+
+        requestCounter ++;
 
         // Create thread to handle the request of the client
         if(pthread_create(&threads[threadNum], NULL, handle_request, msg) != OK){
