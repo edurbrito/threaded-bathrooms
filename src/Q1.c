@@ -13,6 +13,7 @@
 int server_fd; // server file descriptor
 int threadsAvailable = 50; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
 int placesAvailable = 50;
+int places[50] = {0}; 
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -69,6 +70,7 @@ void * handle_request(void *arg){
 
     logOP(TIMUP,msg->i, msg->dur, msg->pl);
 
+    freePlace(places, msg->pl);
     incrementMutexes();
 
     free(arg);
@@ -152,10 +154,9 @@ void * server_closing(void * arg){
 
         pthread_mutex_lock(&threads_lock);
 
-            while(threadsAvailable <= 1){
+            while(threadsAvailable <= 0){
                 pthread_cond_wait(&threads_cond, &threads_lock);
             }
-
             threadsAvailable--;
             
         pthread_mutex_unlock(&threads_lock);
@@ -174,7 +175,7 @@ void * server_closing(void * arg){
     // Wait for the threads that will inform clients that made requests when server was closing
     for(int i = 0; i < threadNum; i++){
         pthread_join(threads[i],NULL);
-    }
+    }   
 
     free(threads);
 
@@ -291,7 +292,7 @@ int main(int argc, char * argv[]){
             }
 
             placesAvailable--;
-            msg->pl = placesAvailable;
+            msg->pl = getAvailablePlace(places, a.nplaces);
         pthread_mutex_unlock(&places_lock);
 
         // Create thread to handle the request of the client
@@ -309,6 +310,7 @@ int main(int argc, char * argv[]){
             threads = realloc(threads, i * MAX_THREADS * sizeof(pthread_t));
         } 
     }
+
     
     // Create thread to handle requests while server is closing
     pthread_t sclosing_thread;
@@ -329,7 +331,6 @@ int main(int argc, char * argv[]){
     
     // Wait for the thread that is handling the requests sent when the server was closing
     pthread_join(sclosing_thread,NULL);
-
     
     free(threads);
 
