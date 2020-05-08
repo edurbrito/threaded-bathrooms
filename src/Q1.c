@@ -11,8 +11,8 @@
 #include "types.h"
 
 int server_fd; // server file descriptor
-int threadsAvailable = 50; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
-int placesAvailable = 50;
+int threadsAvailable = 50; // threads running at the same time / simultaneously
+int placesAvailable = 50; // places available - will be updated with the user value if provided
 int places[50] = {0}; 
 
 // Used to wait for available threads without busy waiting

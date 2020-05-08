@@ -27,8 +27,8 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
 
     args tempargs;
     tempargs.nsecs = -1;
-    tempargs.nplaces = -1;
-    tempargs.nthreads = -1;
+    tempargs.nplaces = 50;
+    tempargs.nthreads = 50;
     tempargs.fifoName[0] = '\0';
 
     while(1) {         
@@ -98,10 +98,6 @@ int checkArgs(int argc, char * argv[], args * a, caller C){
         return ERROR;
 
     a->nsecs = tempargs.nsecs;
-
-    if(C == Q && (tempargs.nplaces == -1 || tempargs.nthreads == -1)){
-        return ERROR;   
-    }
 
     a->nplaces = tempargs.nplaces;
     a->nthreads = tempargs.nthreads;
