@@ -23,8 +23,8 @@ Em conjunto com os *source files*, existe um *Makefile* com os comandos usados p
 1. Abrir dois terminais em simultâneo, na pasta `src` deste diretório, contendo todos os ficheiros e o *Makefile*.
 2. Executar o comando `make` num deles.
 3. Correr os dois programas em simultâneo:
-   1. Num dos terminais, correr `./Q1 -t <nsecs> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `q1.log` e `q1.err`.
-   2. No outro terminal, correr `./U1 -t <nsecs> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `u1.log` e `u1.err`.
+   1. Num dos terminais, correr `./Q2 -t <nsecs> -l <nplaces> -n <nthreads> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `q2.log` e `q2.err`.
+   2. No outro terminal, correr `./U2 -t <nsecs> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `u2.log` e `u2.err`.
 4. Esperar pelo seu término, de acordo com o tempo de execução estipulado para cada
 5. Opcionalmente, se feito o redirecionamento do output para ficheiros de log, correr-se-ia o script `./testing.sh`, ou simplesmente o comando `make test`, para verificar eventuais testes sugeridos no enunciado.
 
@@ -82,7 +82,7 @@ server_fd = open(fifoName,O_RDONLY|O_NONBLOCK)
 ```
 
 Já no ciclo que recebe pedidos, vai ser feita a cada iteração uma tentativa de leitura do FIFO, utilizando a função `read(...)` para proceder à tentativa de leitura do número de bytes ocupados pela struct `message` e verificando o seu valor de retorno:
-- No caso de, entretanto, os Clientes começarem a fazer os seus pedidos, isto é, o FIFO já ter sido aberto para escrita pelo processo *U1*, `read(...)` poderá:
+- No caso de, entretanto, os Clientes começarem a fazer os seus pedidos, isto é, o FIFO já ter sido aberto para escrita pelo processo *U*, `read(...)` poderá:
     - retornar um valor inteiro maior do que zero, quando efetivamente foram lidos dados do FIFO - sendo devolvidos o número de bytes lidos, caso no qual se procede à criação de uma thread para processar o pedido; 
     - retornar `EAGAIN` pelo facto de o FIFO ter sido aberto em modo `O_NONBLOCK` e não existir nada no FIFO para ler naquele instante, caso no qual se avança para a próxima leitura, libertando o espaço anteriormente alocado para a mensagem do Cliente. 
 - No caso de ainda não ter sido feito nenhum pedido, isto é, de o FIFO não se encontrar ainda aberto para escrita, a leitura vai retornar `EOF` pelo que o espaço previamente alocado para receber a mensagem do Cliente é libertado, passando-se para a próxima iteração do ciclo de receção de pedidos.
@@ -175,7 +175,7 @@ Passados os `nsecs`, a variável `terminated` é modificada e a função main re
 
 ### Mecanismos de sincronização usados
 
-Nesta primeira parte do projeto, optámos por nos focar no funcionamento geral do especificado no enunciado. Os mecanismos de sincronização usados, para esta parte, resumem-se à necessidade de impedir um número elevado de threads a executar em simultâneo, sobretudo para não sobrecarregar o sistema, e, ao mesmo tempo, preparando já o suposto do campo `nthreads` da parte seguinte do projeto:
+Os mecanismos de sincronização usados, para esta parte, resumem-se à necessidade de restringir o número de lugares e o número de threads a executar em simultâneo. O exemplo de implementação que se segue é relativo ao campo `nthreads`, mas uma implementação semelhante, com o adicional cálculo do lugar efetivamente livre, foi usada também para o campo `nplaces`:
 
 ```c
 // Used to wait for available threads without busy waiting
