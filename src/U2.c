@@ -179,7 +179,7 @@ int main(int argc, char * argv[]){
             ids = realloc(ids, i * MAX_THREADS * sizeof(int));
         }
 
-        int r = 1 + rand() % 25;
+        int r = 1 + rand() % 250;
         usleep(1000 * r); // Waiting a random number of milliseconds ranging between 1 ms and 25 ms
     }
 
