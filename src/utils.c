@@ -148,7 +148,7 @@ void buildMsg(message * msg, int id, char * fifoClient){
     msg->i = id;
     msg->pid = getpid();
     msg->tid = pthread_self();
-    int r = 1 + rand() % 25; // From 1 to 25
+    int r = 1 + rand() % 75; // From 1 to 75
     msg->dur = r; // miliseconds
     msg->pl = -1;
 
