@@ -20,7 +20,7 @@ Com este projeto, demonstramos conhecer e saber utilizar a interface programáti
 ### Como correr o programa
 
 Em conjunto com os *source files*, existe um *Makefile* com os comandos usados para compilar todos os ficheiros. O nosso procedimento para correr e testar o programa era:
-1. Abrir dois terminais em simultâneo, na pasta `src` deste diretório, contendo todos os ficheiros e o *Makefile*.
+1. Abrir dois terminais em simultâneo, na pasta contendo todos os ficheiros e o *Makefile*.
 2. Executar o comando `make` num deles.
 3. Correr os dois programas em simultâneo:
    1. Num dos terminais, correr `./Q2 -t <nsecs> -l <nplaces> -n <nthreads> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `q2.log` e `q2.err`.
@@ -69,13 +69,11 @@ int ignoreSIGPIPE(){
 
 ### Intercomunicação entre processos através de canais com nome
 
->A utilização de FIFOs e de funções que permitem proceder à sua leitura e escrita permitiu proceder à troca de mensagens entre os processos do Cliente e do Servidor (Quarto de Banho).
+>A utilização de FIFOs e de funções que permitem proceder à sua leitura e escrita garantiu ser possível a troca de mensagens entre os processos do Cliente e do Servidor (Quarto de Banho).
 
 #### Criação, Abertura e Leitura dos pedidos no Servidor 
 
-No Servidor, depois de lidos os argumentos e após a criação do FIFO com o nome neles indicado ter sido executada com sucesso, procede-se à abertura do FIFO em modo de escrita, através da função `mkfifo(..)`. 
-
-Seguidamente, na abertura do FIFO em modo de leitura, `O_RDONLY`, optou-se por ativar a flag `O_NONBLOCK`, pois, para podermos controlar o tempo de execução do servidor, independentemente de este ter ou não solicitações nesse período, é preciso evitar que a abertura do ficheiro com a função `open(...)` bloqueie pelo facto de não existir ainda nenhum processo com o FIFO aberto para escrita. Assim, o Servidor não fica durante tempo indeterminado à espera de Clientes - `open(...)` é bem sucedida e retorna imediatamente mesmo que o FIFO ainda não tenha sido aberto para escrita por nenhum processo, que será o caso.
+No Servidor, depois de lidos os argumentos e após a criação (`mkfifo(..)`) do FIFO com o nome neles indicado ter sido executada com sucesso, procede-se à abertura do FIFO em modo de leitura, `O_RDONLY`, onde se optou por ativar a flag `O_NONBLOCK`, pois, para podermos controlar o tempo de execução do servidor, independentemente de este ter ou não solicitações nesse período, é preciso evitar que a abertura do ficheiro com a função `open(...)` bloqueie pelo facto de não existir ainda nenhum processo com o FIFO aberto para escrita. Assim, o Servidor não fica durante tempo indeterminado à espera de Clientes - `open(...)` é bem sucedida e retorna imediatamente mesmo que o FIFO ainda não tenha sido aberto para escrita por nenhum processo, que será o caso.
 
 ```c
 server_fd = open(fifoName,O_RDONLY|O_NONBLOCK)
@@ -109,7 +107,7 @@ int r;
     logOP(RECVD,msg->i,msg->dur,msg->pl);    
 ```
 
-Um procedimento semelhante para leitura dos pedidos do FIFO público é adotado na função de início de thread responsável por gerar as threads que recusam os pedidos quando o servidor está a encerrar, `void * server_closing(void * arg)`.
+Um procedimento semelhante para leitura dos pedidos do FIFO público é adotado na função de início da thread responsável por gerar as threads que recusam os pedidos quando o servidor está a encerrar, `void * server_closing(void * arg)`.
 
 #### Abertura e escrita de pedidos no processo Cliente
 
