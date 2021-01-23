@@ -1,40 +1,40 @@
 threaded-bathrooms
 ----------
 
-###### TRABALHO PRÁTICO Nº 2
-# Acesso informático aos Quartos de Banho
+#### IT access to bathrooms, using threads and processes to manage anxious people
 
-## Descrição
-Pretende-se obter uma aplicação do tipo cliente-servidor capaz de lidar com situações de conflito no acesso a zonas partilhadas. A zona partilhada é um Quarto de Banho com vários lugares unisexo, controlado por um processo Q ao qual se dirigem pedidos de acesso de utentes. Os pedidos de acesso são enviados por intermédio de um processo multithread U (cliente), e neles se indica o tempo que o interessado deseja estar num lugar das instalações sanitárias. Os pedidos ficarão numa fila de atendimento até terem vez; nessa altura, o utente respetivo acede a um lugar nas instalações durante o tempo pedido, sob o controlo do servidor Q; depois o recurso é libertado para outro utente. 
+## Description
 
-Com este projeto, demonstramos conhecer e saber utilizar a interface programática de UNIX em C para conseguir:
+It is intended to obtain a client-server type application capable of dealing with conflict situations in access to shared areas. The shared zone is a Bathroom with several unisex places, controlled by a Q process to which requests for user access are addressed. Access requests are sent through a multithreaded U process (client), and they indicate the time the interested party wishes to be in one place of the sanitary facilities. The requests will remain in a queue until they have a turn; at that time, the respective user accesses a place in the facilities during the requested time, under the control of the Q server; then the resource is released to another user. 
 
-- criar programas multithread;
+With this project, we demonstrate that we know and know how to use the UNIX in C programmatic interface to:
 
-- promover a intercomunicação entre processos através de canais com nome (named pipes ou FIFOs);
+- create multithread programs;
 
-- evitar conflitos entre entidades concorrentes, por via de mecanismos de sincronização.
+- promote intercommunication between processes through channels with name (named pipes or FIFOs);
 
-## Relatório
+- avoid conflicts between competing entities, through synchronization mechanisms.
 
-### Como correr o programa
+## Report
 
-Em conjunto com os *source files*, existe um *Makefile* com os comandos usados para compilar todos os ficheiros. O nosso procedimento para correr e testar o programa era:
-1. Abrir dois terminais em simultâneo, na pasta contendo todos os ficheiros e o *Makefile*.
-2. Executar o comando `make` num deles.
-3. Correr os dois programas em simultâneo:
-   1. Num dos terminais, correr `./Q2 -t <nsecs> -l <nplaces> -n <nthreads> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `q2.log` e `q2.err`.
-   2. No outro terminal, correr `./U2 -t <nsecs> <fifoname>` com a opção de redirecionar, ou não o output para os ficheiros `u2.log` e `u2.err`.
-4. Esperar pelo seu término, de acordo com o tempo de execução estipulado para cada
-5. Opcionalmente, se feito o redirecionamento do output para ficheiros de log, correr-se-ia o script `./testing.sh`, ou simplesmente o comando `make test`, para verificar eventuais testes sugeridos no enunciado.
+### Run
 
-### Estrutura das mensagens trocadas
+Along side with the *source files*, there is a *Makefile* with the commands used to compile all the files. Our procedure to run and test the program was:
+1. Open two terminals simultaneously, in the folder containing all files and the *Makefile*.
+2. Execute the `make` command in one of them.
+3. Run both programs simultaneously:
+   1. In one of the terminals, run `./Q2 -t <nsecs> -l <nplaces> -n <nthreads> <fifoname>` with the option to redirect or not the output to the files `q2.log` and `q2.err`.
+   2. In the other terminal, run `./U2 -t <nsecs> <fifoname>` with the option to redirect or not the output to `u2.log` and `u2.err` files.
+4. Wait for it to finish, according to the execution time stipulated for each
+5. Optionally, if you redirect the output to log files, you would run the `./testing.sh` script, or simply the `make test` command, to check for any tests suggested in the statement.
 
-Relativamente à estrutura das mensagens trocadas entre e o cliente e o servidor, optamos por utilizar a `struct message` onde o cliente guarda os dados do seu pedido e o servidor a respetiva resposta. 
+### Messages Exchanged
 
-O cliente irá guardar, nessa `struct`, o seu *PID* e *TID*, necessários para criar o canal privado onde recebe a resposta do servidor, a duração de tempo requisitado, e o seu número sequêncial. Por fim, envia ao servidor um pedido através do canal público recebido como parâmetro. 
+Regarding the structure of the messages exchanged between the client and the server, we choose to use the `struct message` where the client stores its request data and the server the respective answer. 
 
-Já no servidor, ao receber o pedido do cliente por esse canal público, deve alterar a `struct`, atualizando com o seu o PID e TID. No caso de o servidor já não estar em funcionamento, altera o pl e dur para -1, para indicar o encerramento do serviço. Assim envia a sua resposta ao cliente, pelo canal privado criado.
+The client will save, in this `struct`, its *PID* and *TID*, necessary to create the private channel where it receives the response from the server, the requested time duration, and its sequential number. Finally, it sends to the server a request through the public channel received as parameter. 
+
+On the server, when receiving the request from the client through this public channel, you must change the `struct`, updating with your PID and TID. In case the server is not working anymore, change the pl and dur to -1, to indicate the end of the service. This way you send your reply to the client, through the private channel created.
 
 ```c
 typedef struct message {
@@ -47,9 +47,9 @@ typedef struct message {
 } message;
 ```
 
-### Tratamento do sinal SIGPIPE
+### SIGPIPE treated
 
-Tendo em conta que, perante uma tentativa de escrita num FIFO que nenhum processo tenha aberto para leitura, o sinal `SIGPIPE` é enviado ao processo escritor, foi necessário em ambos os processos ignorar o sinal evitando que este conduza à terminação do processo e permitindo à função write retornar o erro `EPIPE`. Assim, quando o Servidor tiver terminado de modo forçado (`SIGINT` por exemplo) e é for feita uma tentativa de escrita por parte do Cliente, será escrito *FAILD* na saída padrão. Também no caso de o Cliente terminar abruptamente temos a possibilidade de detetar o erro aquando da tentativa de escrita de uma resposta por parte do Servidor.
+Bearing in mind that in the event of a FIFO writing attempt that no process has opened for reading, the `SIGPIPE` signal is sent to the writer process, it was necessary in both processes to ignore the signal, preventing it from leading to the end of the process and allowing the write function to return the `EPIPE` error. Thus, when the Server has finished in a forced way (`SIGINT` for example) and a writing attempt is made by the Client, *FAILD* will be written to the default output. Also in case the Client abruptly terminates we have the possibility to detect the error when the Server tries to write a response.
 
 ```c
 int ignoreSIGPIPE(){
@@ -67,23 +67,22 @@ int ignoreSIGPIPE(){
 }
 ```
 
-### Intercomunicação entre processos através de canais com nome
+### Process Intercommunication through FIFOs
 
->A utilização de FIFOs e de funções que permitem proceder à sua leitura e escrita garantiu ser possível a troca de mensagens entre os processos do Cliente e do Servidor (Quarto de Banho).
+>The use of FIFOs and functions that allow reading and writing has ensured that it is possible to exchange messages between the processes of the Client and the Server (Bathroom).
 
-#### Criação, Abertura e Leitura dos pedidos no Servidor 
+#### Creation, Open and Reading on the server 
 
-No Servidor, depois de lidos os argumentos e após a criação (`mkfifo(..)`) do FIFO com o nome neles indicado ter sido executada com sucesso, procede-se à abertura do FIFO em modo de leitura, `O_RDONLY`, onde se optou por ativar a flag `O_NONBLOCK`, pois, para podermos controlar o tempo de execução do servidor, independentemente de este ter ou não solicitações nesse período, é preciso evitar que a abertura do ficheiro com a função `open(...)` bloqueie pelo facto de não existir ainda nenhum processo com o FIFO aberto para escrita. Assim, o Servidor não fica durante tempo indeterminado à espera de Clientes - `open(...)` é bem sucedida e retorna imediatamente mesmo que o FIFO ainda não tenha sido aberto para escrita por nenhum processo, que será o caso.
+On the Server, after reading the arguments and after the creation (`mkfifo(...)`) of the FIFO with the name indicated on them has been successfully executed, the FIFO is opened in read mode, `O_RDONLY`, where it was chosen to activate the flag `O_NONBLOCK`, because, in order to be able to control the execution time of the server, regardless of whether or not it has requests during this period, it is necessary to avoid opening the file with the function `open(. ...)` blocks by the fact that there is still no process with FIFO open for writing. Thus, the Server does not wait indefinitely for Clients - `open(...)` is successful and returns immediately even if FIFO has not yet been opened for writing by any process, which will be the case.
 
 ```c
 server_fd = open(fifoName,O_RDONLY|O_NONBLOCK)
 ```
-
-Já no ciclo que recebe pedidos, vai ser feita a cada iteração uma tentativa de leitura do FIFO, utilizando a função `read(...)` para proceder à tentativa de leitura do número de bytes ocupados pela struct `message` e verificando o seu valor de retorno:
-- No caso de, entretanto, os Clientes começarem a fazer os seus pedidos, isto é, o FIFO já ter sido aberto para escrita pelo processo *U*, `read(...)` poderá:
-    - retornar um valor inteiro maior do que zero, quando efetivamente foram lidos dados do FIFO - sendo devolvidos o número de bytes lidos, caso no qual se procede à criação de uma thread para processar o pedido; 
-    - retornar `EAGAIN` pelo facto de o FIFO ter sido aberto em modo `O_NONBLOCK` e não existir nada no FIFO para ler naquele instante, caso no qual se avança para a próxima leitura, libertando o espaço anteriormente alocado para a mensagem do Cliente. 
-- No caso de ainda não ter sido feito nenhum pedido, isto é, de o FIFO não se encontrar ainda aberto para escrita, a leitura vai retornar `EOF` pelo que o espaço previamente alocado para receber a mensagem do Cliente é libertado, passando-se para a próxima iteração do ciclo de receção de pedidos.
+In the cycle that receives requests, an attempt will be made at each iteration to read the FIFO, using the `read(...)` function to attempt to read the number of bytes occupied by the struct `message` and checking its return value:
+- If, however, Clients start to make their requests, i.e. FIFO has already been opened for writing by the *U* process, `read(...)` may:
+    - return an integer value greater than zero, when FIFO data has actually been read - the number of bytes read being returned, in which case a thread is created to process the request; 
+    - return `EAGAIN' because FIFO was opened in `O_NONBLOCK' mode and there was nothing at FIFO to read at that instant, in which case it moves on to the next reading, freeing up the space previously allocated for the Client message. 
+- If no request has been made yet, i.e. FIFO is not yet open for writing, the reading will return `EOF` so the space previously allocated to receive the message from the Client is freed, moving on to the next iteration of the request reception cycle.
 
 ```c
 int r;
@@ -107,14 +106,14 @@ int r;
     logOP(RECVD,msg->i,msg->dur,msg->pl);    
 ```
 
-Um procedimento semelhante para leitura dos pedidos do FIFO público é adotado na função de início da thread responsável por gerar as threads que recusam os pedidos quando o servidor está a encerrar, `void * server_closing(void * arg)`.
+A similar procedure for reading requests from public FIFO is adopted in the start function of the thread responsible for generating the threads that refuse requests when the server is shutting down, `void * server_closing(void * arg)`.
 
-#### Abertura e escrita de pedidos no processo Cliente
+#### Opening and writing requests in the Client process
 
-No Cliente, é feita a abertura para escrita, `O_WRONLY`, do FIFO passado nos argumentos. Seguidamente, no ciclo de geração de pedidos são criadas threads, ficando cada thread encarregue da geração de um pedido. É de notar que cada thread terá acesso ao descritor do FIFO criado na thread inicial, tal como é sugerido pela seguinte afirmação: ["threads share the same global memory (data and heap segments)"](http://man7.org/linux/man-pages/man7/pthreads.7.html).
-Na função de início da thread `void * client_request(int * arg)`, é criado o FIFO com a identificação do cliente (*PID* e *TID*), usando `mkfifo(..)` mais uma vez.
-Segue-se a escrita da mensagem através da função `write(...)`. No caso de o Servidor ter o FIFO aberto para escrita, a chamada desta função bloqueia a thread até se conseguir escrever a mensagem, retornando com sucesso quando termina a escrita.
-Já no caso em que o Servidor não tem o FIFO aberto para escrita, que acontece quando se força a terminação do Servidor abruptamente com um *CTRL-C*, 'SIGINT', a chamada retornará um erro, que levará à escrita da mensagem *FAILD* na saída padrão.
+At the Client, the opening for writing, `O_WRONLY`, of the FIFO passed in the arguments is done. Then, in the order generation cycle, threads are created, leaving each thread in charge of generating an order. It should be noted that each thread will have access to the FIFO descriptor created in the initial thread, as suggested by the following statement: ("threads share the same global memory (data and heap segments)")(http://man7.org/linux/man-pages/man7/pthreads.7.html).
+In the `void * client_request(int * arg)` thread start function, FIFO is created with the client identification (*PID* and *TID*), using `mkfifo(...)` once again.
+This is followed by writing the message using the `write(...)` function. In case the Server has FIFO open for writing, the call of this function blocks the thread until the message can be written, returning successfully when the writing is finished.
+If the Server does not have FIFO open for writing, which happens when you abruptly force the end of the Server with a *CTRL-C*, 'SIGINT', the call will return an error, which will lead to the message *FAILD* being written to the standard output.
 
 ```c
 // Sends message to server
@@ -125,12 +124,13 @@ Já no caso em que o Servidor não tem o FIFO aberto para escrita, que acontece 
         return NULL;
     }
 ```
-No caso de o envio do pedido ser bem sucedido, é aberto o FIFO criado pelo cliente em modo de leitura e é lida a resposta ao pedido realizado, sendo que a função `read(...)` bloqueia até que seja escrita a resposta ou até que o FIFO seja fechado para escrita.
-Após interpretar a resposta do Servidor, o Cliente fecha(`close(...)`) e destrói (`unlink(...)`) o seu FIFO privado.
 
-#### Receção dos pedidos nas threads do Servidor
+If the request is successful, the FIFO created by the client is opened in read mode and the response to the request is read, and the `read(...)` function blocks until the response is written or until FIFO is closed for writing.
+After interpreting the response from the Server, the Client closes (`close(...)`) and destroys (`unlink(...)`) its private FIFO.
 
-Finalmente, tanto na função de início de thread que tem a responsabilidade de aceitar pedidos - `void * handle_request(void *arg)`; como na que é responsável por os recusar - `void * refuse_request(void *arg)`; procede-se à abertura do FIFO privado do Cliente com a função `open(...)` no modo de escrita. A escrita da resposta com a função `write(...)` poderá resultar numa leitura bem sucedida ou num erro no caso de uma leitura mal sucedida. Verificamos, no entanto, que quando se termina abruptamente o processo Cliente com um *CTRL-C* é raro conseguirmos terminar o processo exatamente no instante após a realização do pedido, *IWANT*, e antes da receção da resposta, ocorrendo o erro `EPIPE` em situações muito raras, o que leva a que seja difícil depararmo-nos com um *GAVUP*.
+#### Receive requests on Server threads
+
+Finally, both in the thread start function that has the responsibility to accept requests - `void * handle_request(void *arg)`; and in the one that is responsible to refuse them - `void * refuse_request(void *arg)`; the Client's private FIFO is opened with the `open(...)` function in write mode. Writing the answer with the `write(...)` function may result in a successful reading or an error in case of an unsuccessful reading. However, we notice that when the Client process is abruptly terminated with a *CTRL-C* it is rare for us to be able to terminate the process exactly at the moment after the request has been made, *IWANT*, and before the response has been received, with the `EPIPE' error occurring in very rare situations, which makes it difficult to come across a *GAVUP*.
 
 ```c
 
@@ -148,10 +148,9 @@ if(write(fd, msg, sizeof(message)) == -1){
 
 ```
 
+### Wait for the time specified in the arguments
 
-### Espera do tempo especificado nos argumentos
-
-Como mecanismo auxiliar de espera do tempo de funcionamento de cada programa, implementámos uma thread que corre paralelamente e cuja única função é esperar os `nsecs` especificados. O seu código é o seguinte:
+As an auxiliary waiting mechanism for each program's running time, we implemented a thread that runs in parallel and whose only function is to wait for the specified `nsecs`. Its code is the following:
 ```c
 
 void * timeChecker(void * arg){
@@ -169,11 +168,11 @@ void * timeChecker(void * arg){
 }
 
 ``` 
-Passados os `nsecs`, a variável `terminated` é modificada e a função main recebe a indicação que terminou o seu tempo, saindo do loop de criação de threads.
+After the `nsecs`, the variable `terminated` is modified and the main function receives the indication that its time is up, leaving the thread creation loop.
 
-### Mecanismos de sincronização usados
+### Synchronization mechanisms used
 
-Os mecanismos de sincronização usados, para esta parte, resumem-se à necessidade de restringir o número de lugares e o número de threads a executar em simultâneo. O exemplo de implementação que se segue é relativo ao campo `nthreads`, mas uma implementação semelhante, com o adicional cálculo do lugar efetivamente livre, foi usada também para o campo `nplaces`:
+The synchronization mechanisms used, for this part, boil down to the need to restrict the number of places and the number of threads to be executed simultaneously. The following implementation example is relative to the `nthreads` field, but a similar implementation, with the additional calculation of the effectively free place, was also used for the `nplaces` field:
 
 ```c
 // Used to wait for available threads without busy waiting
@@ -203,9 +202,9 @@ pthread_mutex_unlock(&threads_lock);
 
 ```
 
-### Perído de fecho do servidor - recusar pedidos
+### Server shutdown period - refuse requests
 
-Tal como indicado no enunciado, é necessário que o servidor notifique os clientes no tempo correspondente ao seu encerramento, isto é, quando ainda está a completar os pedidos anteriores. Para isso, optamos por utilizar uma thread que se responsabiliza por, após terminado o tempo de abertura do Servidor, enviar a resposta aos pedidos pendentes no buffer e aos que são feitos durante o tempo de encerramento. O `unlink(...)` é feito após esperar pelas threads já lançadas - `join(...)`, as quais duram o tempo requisitado pelo Cliente. Segue-se a alteração da variável `server_opened`, cujo endereço fora inicialmente enviado como argumento da função de início da thread que recusa os pedidos. Esta variável irá indicar então que o Cliente deixou de conseguir enviar novos pedidos, por deixar de conseguir localizar o FIFO no sistema de ficheiros com a função `lstat(...)`. Posto isto, perante um erro na leitura ou uma tentativa falhada de leitura, o ciclo que está a recusar pedidos termina, aguarda-se pelo envio das respostas que recusam os pedidos e termina-se o programa, fechando o descritor do FIFO.
+As stated in the statement, it is necessary that the server notifies the clients in the time corresponding to their closure, that is, when it is still completing the previous requests. For this, we choose to use a thread that is responsible for, after the Server's opening time is over, sending the answer to the pending requests in the buffer and those made during the closing time. The `unlink(...)` is done after waiting for the threads already released - `join(...)`, which last the time requested by the Client. This is followed by a change in the `server_opened` variable, whose address was initially sent as an argument to the start function of the thread that rejects the requests. This variable will then indicate that the Client is no longer able to send new requests, as it is no longer able to locate FIFO in the filesystem with the `lstat(...)` function. That said, in the event of a reading error or a failed reading attempt, the cycle that is rejecting requests ends, waiting for the replies that reject the requests to be sent, and the program ends, closing the FIFO descriptor.
 
 ```c
 
@@ -264,23 +263,24 @@ void * server_closing(void * arg){
 
     return NULL;
 ```
-### Output esperado
-Em todas as ocasiões, tanto no server como no client, as linhas de output seguem o formato:
+
+### Expected output
+On all occasions, both server and client, the output lines follow the format:
 
 ![](images/closing_server.png)
 
-Dependendo da ação a realizar, a última keyword é diferente, mas, na globalidade, o seu número de ocorrências está sempre relacionado, como esperado e previsto pelo enunciado (podem ser feitos os testes presentes no ficheiro [testing.sh](src/testing.sh)).
+Depending on the action to be performed, the last keyword is different, but overall, its number of occurrences is always related, as expected and predicted by the statement (tests can be made in the file [testing.sh](src/testing.sh)).
 
-As situações de falha também são detetadas:
+Failure situations are also detected:
 
 ![](images/FAILD.png)
 
-E as situações de desistência de um dado cliente, ainda que bastante raras, também podem ocorrer, como detetado na seguinte ocasião:
+And the situations of withdrawal of a given client, although quite rare, can also occur, as detected in the following occasion:
 
 ![](images/GAVUP.png)
 
-### Autores
+### Authors
 
-Diana Freitas - [up201806230](mailto:up201806230@fe.up.pt)
-Eduardo Brito - [up201806271](mailto:up201806271@fe.up.pt)
-Maria Baía - [up201704951](mailto:up201704951@fe.up.pt)
+* Diana Freitas, [@dianaamfr](https://github.com/dianaamfr)
+* Eduardo Brito, [@edurbrito](https://github.com/edurbrito)
+* Maria Baía
