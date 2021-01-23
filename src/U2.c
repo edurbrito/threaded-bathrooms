@@ -11,7 +11,7 @@
 #include "types.h"
 
 int fdserver = 0; // server file descriptor
-int threadsAvailable = 50; // threads running at the same time / simultaneously -> will be fairly used in the 2nd part
+int threadsAvailable = 50; // threads running at the same time / simultaneously
 
 // Used to wait for available threads without busy waiting
 pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -92,7 +92,7 @@ int main(int argc, char * argv[]){
 
     args a;
 
-    if (checkArgs(argc, argv, &a) != OK ){
+    if (checkArgs(argc, argv, &a, U) != OK ){
         fprintf(stderr,"Usage: %s <-t nsecs> fifoname\n",argv[0]);
         exit(ERROR);
     }
@@ -179,7 +179,7 @@ int main(int argc, char * argv[]){
             ids = realloc(ids, i * MAX_THREADS * sizeof(int));
         }
 
-        int r = 1 + rand() % 25;
+        int r = 1 + rand() % 75;
         usleep(1000 * r); // Waiting a random number of milliseconds ranging between 1 ms and 25 ms
     }
 

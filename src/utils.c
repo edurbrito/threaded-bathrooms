@@ -14,24 +14,29 @@
 void printArgs(args * a){
     printf("###### ARGS ######\n");
     printf("nsecs = %d\n", a->nsecs);
+    printf("nplaces = %d\n", a->nplaces);
+    printf("nthreads = %d\n", a->nthreads);
     printf("fifoName = %s\n", a->fifoName);
     printf("###### ARGS ######\n\n");
 }
 
-int checkArgs(int argc, char * argv[], args * a){
+int checkArgs(int argc, char * argv[], args * a, caller C){
    
     int c;
     int option_index = 0;
 
     args tempargs;
     tempargs.nsecs = -1;
+    tempargs.nplaces = 50;
+    tempargs.nthreads = 50;
+    tempargs.fifoName[0] = '\0';
 
     while(1) {         
 
         // The short_options array, as a string, is interpreted 
         // as a no_argument option for every alone character and 
         // a required_argument option for every character followed by a colon (:)
-        c = getopt_long(argc, argv, "t:", NULL, &option_index);
+        c = getopt_long(argc, argv, "t:l:n:", NULL, &option_index);
         // c contains the current arg from argv that is being analyzed
 
         if (c == -1)
@@ -51,6 +56,16 @@ int checkArgs(int argc, char * argv[], args * a){
                     return ERROR;
                 break;
 
+            case 'l':
+                if( (tempargs.nplaces = atoi(optarg)) <= 0 || C != Q )
+                    return ERROR;
+                break;
+
+            case 'n':
+                if( (tempargs.nthreads = atoi(optarg)) <= 0 || C != Q )
+                    return ERROR;
+                break;
+            
             case '?': // Unkown option in argv
                 /* getopt_long already printed an error message. */
                 // printf("Exiting...\n");
@@ -83,6 +98,9 @@ int checkArgs(int argc, char * argv[], args * a){
         return ERROR;
 
     a->nsecs = tempargs.nsecs;
+
+    a->nplaces = tempargs.nplaces;
+    a->nthreads = tempargs.nthreads;
   
     strcpy(a->fifoName, tempargs.fifoName);
    
@@ -130,7 +148,7 @@ void buildMsg(message * msg, int id, char * fifoClient){
     msg->i = id;
     msg->pid = getpid();
     msg->tid = pthread_self();
-    int r = 1 + rand() % 250; // From 1 to 250
+    int r = 1 + rand() % 75; // From 1 to 75
     msg->dur = r; // miliseconds
     msg->pl = -1;
 
@@ -170,4 +188,23 @@ int ignoreSIGPIPE(){
     }
 
     return OK;
+}
+
+int getAvailablePlace(int places[], int size, int requestNum){
+    int place = requestNum % size;
+
+    if(places[place] == 0)
+        return place;
+
+    for(int i = 0 ;  i < size; i++){
+        if(places[i] == 0){
+            places[i] = 1;
+            return i;
+        }
+    }
+    return -1;
+}
+
+void freePlace(int places[], int placeNum){
+    places[placeNum] = 0;
 }

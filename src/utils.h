@@ -21,12 +21,13 @@ void printArgs(args * a);
  * @param argc number of args passed
  * @param argv args passed
  * @param a struct to be filled with args
+ * @param C caller program
  * @return OK if successful, ERROR otherwise
  * @note Lots of Credits to those who managed to give a very good explanation at 
  * @see https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html
  * @see https://linux.die.net/man/3/getopt_long for more info on the functions used
  */
-int checkArgs(int argc, char * argv[], args * a);
+int checkArgs(int argc, char * argv[], args * a, caller C);
 
 /**
  * @brief Appends some log info to the stdout
@@ -75,5 +76,10 @@ int isNotNonBlockingError();
  * @return OK if successfull, ERROR otherwise
 */
 int ignoreSIGPIPE();
+
+int getAvailablePlace(int places[], int size, int requestNum);
+
+void freePlace(int places[], int placeNum);
+
 
 #endif

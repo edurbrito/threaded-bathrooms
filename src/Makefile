@@ -7,12 +7,12 @@ begin:
 
 generate:
 		@echo "Creating ouput files..."
-		gcc U1.c utils.c -o U1 -Wall -lpthread -D_REENTRANT
-		gcc Q1.c utils.c -o Q1 -Wall -lpthread -D_REENTRANT
+		gcc U2.c utils.c -o U2 -Wall -lpthread -D_REENTRANT
+		gcc Q2.c utils.c -o Q2 -Wall -lpthread -D_REENTRANT
 
 clean:
 		@echo "Cleaning up..."
-		-rm U1 Q1 -f
+		-rm U2 Q2 -f
 		-rm *.log *.err -f
 
 test:
